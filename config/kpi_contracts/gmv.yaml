@@ -1,0 +1,58 @@
+kpi:
+  id: marketplace_gmv
+
+  name: Marketplace GMV
+
+  description: >
+    Total merchandise value of items sold through the marketplace,
+    calculated as the sum of order item prices.
+
+  formula: "SUM(fact_order_items_enriched.price)"
+
+  base_grain: order_item
+
+  aggregation_grain:
+    - day
+    - week
+    - month
+
+  dimensions:
+    - customer_state
+    - seller_state
+    - category_name
+    - seller_id
+    - product_id
+
+  primary_date: order_purchase_timestamp
+
+  drivers:
+    - order_volume
+    - average_order_value
+    - product_mix
+    - category_mix
+    - seller_activity
+    - customer_geography
+
+  materiality:
+    min_relative_change: 0.05
+    min_absolute_change: 100000
+    
+  minimum_observation:
+    item_rows: 10
+    orders: 10
+
+  anomaly:
+    baseline: seasonal
+    comparison_window_weeks: 8
+    z_score_threshold: 2.0
+
+  lineage:
+    - fact_order_items_enriched.price
+    - fact_order_items_enriched.order_id
+    - fact_order_items_enriched.order_purchase_timestamp
+
+  access_roles:
+    - executive
+    - operations
+
+  sensitivity: internal

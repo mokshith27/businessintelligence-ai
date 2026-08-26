@@ -1,0 +1,51 @@
+kpi:
+  id: customer_review_score
+
+  name: Customer Review Score
+
+  description: >
+    Average customer review score associated with marketplace orders.
+
+  formula: "AVG(fact_reviews.review_score)"
+
+  base_grain: review
+
+  aggregation_grain:
+    - day
+    - week
+    - month
+
+  dimensions:
+    - customer_state
+    - seller_id
+    - category_name
+
+  primary_date: review_creation_date
+
+  drivers:
+    - delivery_experience
+    - product_quality
+    - packaging
+    - seller_performance
+    - customer_service
+
+  materiality:
+    min_relative_change: 0.05
+    min_absolute_change: 0.20
+
+  anomaly:
+    baseline: seasonal
+    comparison_window_weeks: 8
+    z_score_threshold: 2.0
+
+  lineage:
+    - fact_reviews.review_id
+    - fact_reviews.order_id
+    - fact_reviews.review_score
+    - fact_reviews.review_creation_date
+
+  access_roles:
+    - executive
+    - operations
+
+  sensitivity: internal

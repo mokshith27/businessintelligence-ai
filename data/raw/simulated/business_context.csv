@@ -1,0 +1,13 @@
+scenario_id,date,region,category,seller_id,promotion_flag,marketing_campaign,inventory_status,competitor_price_index,external_event_flag,ground_truth_driver
+SCN_001,2018-02-02,SP,health_beauty,,1,holiday_campaign,normal,1.02,0,promotion
+SCN_001,2018-02-03,SP,health_beauty,,1,holiday_campaign,normal,1.02,0,promotion
+SCN_001,2018-02-04,SP,health_beauty,,1,holiday_campaign,normal,1.01,0,promotion
+SCN_001,2018-02-05,SP,health_beauty,,1,holiday_campaign,normal,1.01,0,promotion
+SCN_002,2018-06-06,SP,electronics,,0,,constrained,1.08,0,inventory_constraint
+SCN_002,2018-06-07,SP,electronics,,0,,constrained,1.08,0,inventory_constraint
+SCN_002,2018-06-08,SP,electronics,,0,,constrained,1.08,0,inventory_constraint
+SCN_002,2018-06-09,SP,electronics,,0,,constrained,1.08,0,inventory_constraint
+SCN_002,2018-06-10,SP,electronics,,0,,constrained,1.08,0,inventory_constraint
+SCN_003,2018-07-18,RJ,watches_gifts,,1,summer_campaign,normal,0.98,0,promotion
+SCN_003,2018-07-19,RJ,watches_gifts,,1,summer_campaign,normal,0.98,0,promotion
+SCN_003,2018-07-20,RJ,watches_gifts,,1,summer_campaign,normal,0.98,0,promotion

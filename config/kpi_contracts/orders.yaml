@@ -1,0 +1,51 @@
+kpi:
+  id: marketplace_orders
+
+  name: Marketplace Orders
+
+  description: >
+    Number of unique orders placed through the marketplace.
+
+  formula: "COUNT(DISTINCT fact_orders_enriched.order_id)"
+
+  base_grain: order
+
+  aggregation_grain:
+    - day
+    - week
+    - month
+
+  dimensions:
+    - customer_state
+    - seller_state
+    - category_name
+    - seller_id
+
+  primary_date: order_purchase_timestamp
+
+  drivers:
+    - customer_demand
+    - seller_activity
+    - product_availability
+    - seasonality
+    - geography
+    - marketing_activity
+
+  materiality:
+    min_relative_change: 0.05
+    min_absolute_change: 500
+
+  anomaly:
+    baseline: seasonal
+    comparison_window_weeks: 8
+    z_score_threshold: 2.0
+
+  lineage:
+    - fact_orders_enriched.order_id
+    - fact_orders_enriched.order_purchase_timestamp
+
+  access_roles:
+    - executive
+    - operations
+
+  sensitivity: internal

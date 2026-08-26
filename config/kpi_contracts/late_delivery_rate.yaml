@@ -1,0 +1,53 @@
+kpi:
+  id: late_delivery_rate
+
+  name: Late Delivery Rate
+
+  description: >
+    Percentage of delivered orders where the customer delivery date
+    was later than the estimated delivery date.
+
+  formula: >
+    COUNT(delivered orders with delivery_delay_days > 0)
+    / COUNT(delivered orders)
+
+  base_grain: order
+
+  aggregation_grain:
+    - day
+    - week
+    - month
+
+  dimensions:
+    - customer_state
+    - seller_state
+    - seller_id
+
+  primary_date: order_purchase_timestamp
+
+  drivers:
+    - seller_performance
+    - logistics
+    - geography
+    - carrier_delay
+
+  materiality:
+    min_relative_change: 0.10
+    min_absolute_change: 0.03
+
+  anomaly:
+    baseline: seasonal
+    comparison_window_weeks: 8
+    z_score_threshold: 2.0
+
+  lineage:
+    - fact_orders_enriched.order_status
+    - fact_orders_enriched.order_delivered_customer_date
+    - fact_orders_enriched.order_estimated_delivery_date
+    - fact_orders_enriched.delivery_delay_days
+
+  access_roles:
+    - operations
+    - executive
+
+  sensitivity: internal

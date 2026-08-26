@@ -1,0 +1,796 @@
+{
+  "insight_id": "GMV_EVT_037",
+  "kpi": {
+    "id": "marketplace_gmv",
+    "name": "Marketplace GMV",
+    "grain": "order_item",
+    "primary_date": "order_purchase_timestamp"
+  },
+  "event": {
+    "event_id": 37,
+    "start_date": "2017-11-23",
+    "end_date": "2017-11-29",
+    "duration_days": 7,
+    "direction": "POSITIVE",
+    "event_type": "BUSINESS_MOVEMENT",
+    "investigation_priority": "HIGH",
+    "priority_score": 1.0,
+    "peak_change": 6.063765989389963,
+    "peak_z_score": 40.437114188330995,
+    "cumulative_absolute_impact": 284665.2449999991,
+    "source_coverage": "NORMAL_DATA_COVERAGE"
+  },
+  "movement": {
+    "comparison_period": {
+      "start": "2017-11-16 00:00:00",
+      "end": "2017-11-22 00:00:00"
+    },
+    "previous_gmv": 204230.42999999758,
+    "current_gmv": 439250.3400000061,
+    "gmv_change": 235019.9100000085,
+    "previous_orders": 1367,
+    "current_orders": 3424,
+    "orders_change": 2057,
+    "previous_aov": 149.4004608632023,
+    "current_aov": 128.2857301401887,
+    "aov_change": -21.114730723013622,
+    "volume_effect": 285600.24744698766,
+    "aov_effect": -50580.33744697913,
+    "residual_effect": -2.9103830456733704e-11
+  },
+  "drivers": [
+    {
+      "driver_type": "customer_state",
+      "driver": "SP",
+      "observed_contribution": {
+        "gmv_change": 79092.2099999984,
+        "share": 0.3365340834314656
+      },
+      "evidence": {
+        "review": {
+          "status": "SUPPORTING",
+          "event_records": 259,
+          "comparison_records": 135,
+          "directional_support": 0.07018447018447013
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.418,
+        "structural": 0.673,
+        "review": 0.07,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "WEAK",
+      "action": {
+        "decision": "INVESTIGATE",
+        "lever": "regional demand / operations",
+        "action": "Investigate the drivers of the KPI movement among customers in SP, including demand, availability and operational performance.",
+        "owner": "Regional Operations",
+        "monitoring_plan": "Monitor orders, AOV and customer experience metrics in SP.",
+        "action_type": "INVESTIGATE"
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "MG",
+      "observed_contribution": {
+        "gmv_change": 51548.07000000009,
+        "share": 0.21933490656173862
+      },
+      "evidence": {
+        "review": {
+          "status": "SUPPORTING",
+          "event_records": 54,
+          "comparison_records": 48,
+          "directional_support": 0.19444444444444445
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.302,
+        "structural": 0.439,
+        "review": 0.194,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "bed_bath_table",
+      "observed_contribution": {
+        "gmv_change": 32742.20000000026,
+        "share": 0.13931670725258585
+      },
+      "evidence": {
+        "review": {
+          "status": "SUPPORTING",
+          "event_records": 50,
+          "comparison_records": 28,
+          "directional_support": 0.15428571428571433
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.198,
+        "structural": 0.279,
+        "review": 0.154,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "RJ",
+      "observed_contribution": {
+        "gmv_change": 37912.98000000011,
+        "share": 0.16131816236334506
+      },
+      "evidence": {
+        "review": {
+          "status": "CONTRADICTING",
+          "event_records": 90,
+          "comparison_records": 43,
+          "directional_support": -0.34677002583979327
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.171,
+        "structural": 0.323,
+        "review": 0.347,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "CONTRADICTED",
+      "action": {
+        "decision": "DO_NOT_ACT",
+        "lever": null,
+        "action": "Do not act on this hypothesis; treat it as contradicted by the available evidence.",
+        "owner": "Analyst",
+        "monitoring_plan": "Re-evaluate if new evidence becomes available.",
+        "action_type": "DO_NOT_ACT"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "furniture_decor",
+      "observed_contribution": {
+        "gmv_change": 21593.20000000016,
+        "share": 0.09187817321519431
+      },
+      "evidence": {
+        "review": {
+          "status": "SUPPORTING",
+          "event_records": 33,
+          "comparison_records": 32,
+          "directional_support": 0.2774621212121212
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.166,
+        "structural": 0.184,
+        "review": 0.277,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "PR",
+      "observed_contribution": {
+        "gmv_change": 12758.910000000036,
+        "share": 0.054288634524622084
+      },
+      "evidence": {
+        "review": {
+          "status": "SUPPORTING",
+          "event_records": 28,
+          "comparison_records": 15,
+          "directional_support": 0.33571428571428574
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.132,
+        "structural": 0.109,
+        "review": 0.336,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "computers_accessories",
+      "observed_contribution": {
+        "gmv_change": 16660.57000000005,
+        "share": 0.07089003650796841
+      },
+      "evidence": {
+        "review": {
+          "status": "SUPPORTING",
+          "event_records": 35,
+          "comparison_records": 24,
+          "directional_support": 0.1523809523809524
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.116,
+        "structural": 0.142,
+        "review": 0.152,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "health_beauty",
+      "observed_contribution": {
+        "gmv_change": 19190.400000000118,
+        "share": 0.0816543585605127
+      },
+      "evidence": {
+        "review": {
+          "status": "NEUTRAL",
+          "event_records": 34,
+          "comparison_records": 21,
+          "directional_support": -0.0168067226890756
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.101,
+        "structural": 0.163,
+        "review": 0.017,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "watches_gifts",
+      "observed_contribution": {
+        "gmv_change": 19865.76000000004,
+        "share": 0.08452798743731678
+      },
+      "evidence": {
+        "review": {
+          "status": "CONTRADICTING",
+          "event_records": 32,
+          "comparison_records": 27,
+          "directional_support": -0.21990740740740744
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.095,
+        "structural": 0.169,
+        "review": 0.22,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "CONTRADICTED",
+      "action": {
+        "decision": "DO_NOT_ACT",
+        "lever": null,
+        "action": "Do not act on this hypothesis; treat it as contradicted by the available evidence.",
+        "owner": "Analyst",
+        "monitoring_plan": "Re-evaluate if new evidence becomes available.",
+        "action_type": "DO_NOT_ACT"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "sports_leisure",
+      "observed_contribution": {
+        "gmv_change": 14552.000000000085,
+        "share": 0.06191815833815764
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.074,
+        "structural": 0.124,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "toys",
+      "observed_contribution": {
+        "gmv_change": 13737.270000000115,
+        "share": 0.058451515873696056
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.07,
+        "structural": 0.117,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "ABSTAIN",
+      "action": {
+        "decision": "ABSTAIN",
+        "lever": null,
+        "action": "Collect additional evidence before taking an operational action.",
+        "owner": "Analyst",
+        "monitoring_plan": "Refresh the missing or insufficient evidence source.",
+        "action_type": "ABSTAIN"
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "perfumery",
+      "observed_contribution": {
+        "gmv_change": 11404.439999999984,
+        "share": 0.048525420676059194
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.058,
+        "structural": 0.097,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "telephony",
+      "observed_contribution": {
+        "gmv_change": 11210.409999999973,
+        "share": 0.04769983104835487
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.057,
+        "structural": 0.095,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "RS",
+      "observed_contribution": {
+        "gmv_change": 11057.350000000039,
+        "share": 0.04704856707671975
+      },
+      "evidence": {
+        "review": {
+          "status": "CONTRADICTING",
+          "event_records": 20,
+          "comparison_records": 8,
+          "directional_support": -0.14999999999999997
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.056,
+        "structural": 0.094,
+        "review": 0.15,
+        "context": 0.0,
+        "independent_sources": 2
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "category",
+      "driver": "garden_tools",
+      "observed_contribution": {
+        "gmv_change": 10893.050000000021,
+        "share": 0.046349477369809336
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.056,
+        "structural": 0.093,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "ES",
+      "observed_contribution": {
+        "gmv_change": 8796.359999999986,
+        "share": 0.037428148108812
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.045,
+        "structural": 0.075,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "SC",
+      "observed_contribution": {
+        "gmv_change": 7164.669999999989,
+        "share": 0.03048537462208938
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.037,
+        "structural": 0.061,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "BA",
+      "observed_contribution": {
+        "gmv_change": 5203.559999999995,
+        "share": 0.022140932655449516
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.027,
+        "structural": 0.044,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "CE",
+      "observed_contribution": {
+        "gmv_change": 4525.949999999996,
+        "share": 0.019257730121672808
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.023,
+        "structural": 0.039,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "DF",
+      "observed_contribution": {
+        "gmv_change": 4446.419999999997,
+        "share": 0.018919333259892052
+      },
+      "evidence": {
+        "review": {
+          "status": "NO_EVIDENCE",
+          "event_records": 0,
+          "comparison_records": 0,
+          "directional_support": 0.0
+        },
+        "context": {
+          "status": "NO_CONTEXT_EVIDENCE"
+        }
+      },
+      "confidence": {
+        "overall": 0.023,
+        "structural": 0.038,
+        "review": 0.0,
+        "context": 0.0,
+        "independent_sources": 1
+      },
+      "status": "WEAK_DRIVER",
+      "action": {
+        "decision": null,
+        "lever": null,
+        "action": null,
+        "owner": null,
+        "monitoring_plan": null,
+        "action_type": null
+      }
+    }
+  ],
+  "data_quality": {
+    "commerce_source": "NORMAL_DATA_COVERAGE",
+    "review_text_available": true,
+    "business_context_available": false,
+    "notes": [
+      "Business context has no overlapping scenario for this 2017 event.",
+      "Root-cause interpretation therefore remains conservative."
+    ]
+  },
+  "lineage": {
+    "raw_sources": [
+      "olist_orders_dataset",
+      "olist_order_items_dataset",
+      "olist_customers_dataset",
+      "olist_products_dataset",
+      "olist_sellers_dataset",
+      "olist_order_reviews_dataset"
+    ],
+    "analytical_tables": [
+      "fact_orders_enriched",
+      "fact_order_items_enriched",
+      "fact_reviews",
+      "fact_review_sentiment",
+      "fact_driver_confidence",
+      "fact_recommended_actions"
+    ],
+    "methods": [
+      "seasonal robust baseline",
+      "robust z-score",
+      "materiality rules",
+      "event clustering",
+      "GMV volume/AOV decomposition",
+      "segment contribution analysis",
+      "aspect tagging",
+      "multilingual sentiment",
+      "evidence fusion"
+    ]
+  },
+  "llm_policy": {
+    "quantitative_truth_source": "deterministic analytical layer",
+    "allowed_llm_tasks": [
+      "narrative synthesis",
+      "persona adaptation",
+      "natural language explanation",
+      "uncertainty wording"
+    ],
+    "forbidden_llm_tasks": [
+      "calculating KPI values",
+      "inventing drivers",
+      "overriding confidence",
+      "creating unsupported actions"
+    ]
+  }
+}

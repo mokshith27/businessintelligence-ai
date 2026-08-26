@@ -1,0 +1,46 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment/secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+
+# Logs
+*.log
+
+# Large generated files
+*.parquet
+*.pkl
+*.pickle
+*.joblib
+
+# DuckDB generated/database files
+*.duckdb
+*.db
+
+# Temporary files
+tmp/
+temp/
