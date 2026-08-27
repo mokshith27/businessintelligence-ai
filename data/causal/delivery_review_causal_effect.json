@@ -1,0 +1,57 @@
+{
+  "estimand": "ATE",
+  "treatment": "late_delivery",
+  "outcome": "review_score",
+  "method": "Doubly Robust AIPW with propensity adjustment and bootstrap uncertainty",
+  "sample_size": 96359,
+  "trimmed_sample_size": 94471,
+  "treated": 7701,
+  "control": 88658,
+  "naive_treated_mean_review": 2.566549798727438,
+  "naive_control_mean_review": 4.293577567732184,
+  "naive_difference": -1.7270277690047457,
+  "causal_effect": -1.5702901206375242,
+  "bootstrap": {
+    "bootstrap_samples": 500,
+    "ci_lower": -1.5852547374042358,
+    "ci_upper": -1.5535691855723877,
+    "bootstrap_std": 0.007961798083498773
+  },
+  "overlap": {
+    "min_propensity": 0.19797466354671348,
+    "max_propensity": 0.8079059207634887,
+    "treated_min": 0.2385727077472223,
+    "treated_max": 0.8079059207634887,
+    "control_min": 0.19797466354671348,
+    "control_max": 0.8079059207634887,
+    "overlap_lower": 0.2385727077472223,
+    "overlap_upper": 0.8079059207634887,
+    "overlap_width": 0.5693332130162664,
+    "acceptable_overlap": true
+  },
+  "trimming": {
+    "lower": 0.34084739938736625,
+    "upper": 0.7186825034233478
+  },
+  "features": [
+    "purchase_month",
+    "purchase_dow",
+    "customer_state"
+  ],
+  "status": "CAUSAL_EVIDENCE",
+  "confidence": 0.8,
+  "interpretation": "Under the observational adjustment assumptions, late delivery is estimated to reduce review score by about 1.570 points (95% bootstrap interval [-1.585, -1.554]).",
+  "causal_assumptions": [
+    "No unmeasured confounding after adjustment for included pre-treatment covariates.",
+    "Positivity / overlap holds for the analyzed population.",
+    "Treatment definition correctly captures late delivery.",
+    "Review score is measured consistently.",
+    "Observed data are representative of the target population for this estimate."
+  ],
+  "limitations": [
+    "This is observational causal inference, not a randomized experiment.",
+    "Unmeasured confounding may remain.",
+    "The estimated effect is conditional on the available covariates and overlap.",
+    "Poor overlap causes the engine to downgrade or reject causal interpretation."
+  ]
+}

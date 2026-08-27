@@ -1,10 +1,24 @@
 from pathlib import Path
 import json
 import math
+from datetime import date, datetime
+from typing import Optional
 
 import duckdb
+from fastapi import FastAPI, HTTPException, Query
+from pydantic import BaseModel
 
-from fastapi import FastAPI, HTTPException
+from security.role_filter import (
+    CAUSAL_PATH,
+    build_role_view,
+)
+
+from feedback.capture_and_calibrate import (
+    ensure_feedback_table,
+    capture_feedback,
+    load_feedback,
+    build_calibration_report,
+)
 
 
 # ============================================================
@@ -57,6 +71,37 @@ OPERATIONS_VALIDATION_PATH = (
 
 
 # ============================================================
+# DATABASE HELPERS
+# ============================================================
+
+def connect_database():
+    """
+    Return a read-write DuckDB connection.
+
+    Feedback endpoints need a writable connection because they
+    create/insert feedback records. Analytical endpoints can use
+    get_connection() below for read-only access.
+    """
+
+    if not DB_PATH.exists():
+        raise HTTPException(
+            status_code=500,
+            detail=f"DuckDB database not found: {DB_PATH}",
+        )
+
+    try:
+        return duckdb.connect(
+            str(DB_PATH),
+            read_only=False,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Could not open DuckDB: {exc}",
+        )
+
+
+# ============================================================
 # APP
 # ============================================================
 
@@ -69,9 +114,373 @@ app = FastAPI(
 )
 
 
+@app.get("/api/insights/role")
+def role_based_insight(
+    role: str = Query(
+        "executive",
+        description=(
+            "Allowed values: executive, operations, analyst"
+        ),
+    )
+):
+
+    allowed_roles = {
+        "executive",
+        "operations",
+        "analyst",
+    }
+
+    role = role.lower().strip()
+
+    if role not in allowed_roles:
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid role. "
+                "Use: executive, operations, analyst."
+            ),
+        )
+
+    insight = read_json(
+        INSIGHT_PATH
+    )
+
+    causal_status = None
+
+    if CAUSAL_PATH.exists():
+
+        causal_status = read_json(
+            CAUSAL_PATH
+        )
+
+    filtered_view = build_role_view(
+        insight,
+        role,
+        causal_status,
+    )
+
+    return make_json_safe(
+        filtered_view
+    )
+
+
+@app.get("/api/security/test")
+def security_test():
+
+    insight = read_json(
+        INSIGHT_PATH
+    )
+
+    causal_status = None
+
+    if CAUSAL_PATH.exists():
+
+        causal_status = read_json(
+            CAUSAL_PATH
+        )
+
+    results = {}
+
+    for role in [
+        "executive",
+        "operations",
+        "analyst",
+    ]:
+
+        filtered = build_role_view(
+            insight,
+            role,
+            causal_status,
+        )
+
+        results[role] = {
+
+            "visible_sections":
+                [
+                    key
+                    for key in filtered
+                    if not key.startswith("_")
+                ],
+
+            "restricted_fields":
+                filtered[
+                    "_security"
+                ][
+                    "restricted_fields"
+                ],
+        }
+
+    return make_json_safe(
+        {
+            "security_model":
+                "application-level role filtering",
+
+            "roles":
+                results,
+        }
+    )
+
 # ============================================================
 # HELPERS
 # ============================================================
+
+def make_json_safe(value):
+    """
+    Convert pandas / NumPy / DuckDB values into
+    standard JSON-serializable Python values.
+    """
+
+    if value is None:
+        return None
+
+    # datetime / date
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+
+    # float NaN / infinity
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            return None
+        return value
+
+    # pandas Timestamp / NumPy scalar support without
+    # requiring direct NumPy imports.
+    if hasattr(value, "item"):
+        try:
+            return make_json_safe(
+                value.item()
+            )
+        except Exception:
+            pass
+
+    # pandas Timestamp-like objects
+    if hasattr(value, "isoformat") and not isinstance(value, str):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+
+    # dictionaries
+    if isinstance(value, dict):
+        return {
+            str(key): make_json_safe(val)
+            for key, val in value.items()
+        }
+
+    # lists / tuples
+    if isinstance(value, (list, tuple)):
+        return [
+            make_json_safe(item)
+            for item in value
+        ]
+
+    # fallback
+    return value
+
+
+class FeedbackRequest(BaseModel):
+
+    role: str
+
+    event_id: str
+
+    event_start_date: Optional[str] = None
+
+    event_end_date: Optional[str] = None
+
+    driver_type: str
+
+    driver: str
+
+    predicted_status: str
+
+    predicted_confidence: float
+
+    predicted_decision: Optional[str] = None
+
+    feedback_label: str
+
+    corrected_driver: Optional[str] = None
+
+    correction_text: Optional[str] = None
+
+
+@app.post("/api/feedback")
+def submit_feedback(
+    feedback: FeedbackRequest
+):
+
+    con = connect_database()
+
+    try:
+
+        ensure_feedback_table(
+            con
+        )
+
+        feedback_id = capture_feedback(
+            con,
+
+            role=feedback.role,
+
+            event_id=feedback.event_id,
+
+            event_start_date=(
+                feedback.event_start_date
+            ),
+
+            event_end_date=(
+                feedback.event_end_date
+            ),
+
+            driver_type=(
+                feedback.driver_type
+            ),
+
+            driver=(
+                feedback.driver
+            ),
+
+            predicted_status=(
+                feedback.predicted_status
+            ),
+
+            predicted_confidence=(
+                feedback.predicted_confidence
+            ),
+
+            predicted_decision=(
+                feedback.predicted_decision
+            ),
+
+            feedback_label=(
+                feedback.feedback_label
+            ),
+
+            corrected_driver=(
+                feedback.corrected_driver
+            ),
+
+            correction_text=(
+                feedback.correction_text
+            ),
+        )
+
+        return make_json_safe(
+            {
+                "success": True,
+                "feedback_id": feedback_id,
+                "message": "Feedback recorded successfully.",
+            }
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        )
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] /api/feedback POST: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+    finally:
+
+        con.close()
+
+
+@app.get("/api/feedback")
+def get_feedback():
+
+    con = connect_database()
+
+    try:
+
+        ensure_feedback_table(
+            con
+        )
+
+        df = load_feedback(
+            con
+        )
+
+        records = (
+            df.to_dict(
+                orient="records"
+            )
+            if not df.empty
+            else []
+        )
+
+        return make_json_safe(
+            {
+                "feedback": records
+            }
+        )
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] /api/feedback: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+    finally:
+
+        con.close()
+
+
+@app.get("/api/calibration")
+def get_calibration():
+
+    con = connect_database()
+
+    try:
+
+        ensure_feedback_table(
+            con
+        )
+
+        df = load_feedback(
+            con
+        )
+
+        report = build_calibration_report(
+            df
+        )
+
+        return make_json_safe(
+            report
+        )
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] /api/calibration: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+    finally:
+
+        con.close()
+
 
 def get_connection():
 
@@ -101,9 +510,11 @@ def read_json(path):
 
     try:
 
-        return json.loads(
-            path.read_text(
-                encoding="utf-8"
+        return make_json_safe(
+            json.loads(
+                path.read_text(
+                    encoding="utf-8"
+                )
             )
         )
 
@@ -113,7 +524,8 @@ def read_json(path):
             status_code=500,
             detail=f"Invalid JSON: {path.name}",
         )
-        
+
+
 def sanitize_value(value):
     """
     Convert values returned by Pandas/DuckDB into strict JSON-safe
@@ -186,8 +598,10 @@ def health():
 @app.get("/api/insights/latest")
 def latest_insight():
 
-    return read_json(
-        INSIGHT_PATH
+    return make_json_safe(
+        read_json(
+            INSIGHT_PATH
+        )
     )
 
 
@@ -198,8 +612,10 @@ def latest_insight():
 @app.get("/api/insights/latest/executive")
 def executive_story():
 
-    return read_json(
-        EXECUTIVE_STORY_PATH
+    return make_json_safe(
+        read_json(
+            EXECUTIVE_STORY_PATH
+        )
     )
 
 
@@ -210,8 +626,10 @@ def executive_story():
 @app.get("/api/insights/latest/operations")
 def operations_story():
 
-    return read_json(
-        OPERATIONS_STORY_PATH
+    return make_json_safe(
+        read_json(
+            OPERATIONS_STORY_PATH
+        )
     )
 
 
@@ -230,10 +648,12 @@ def validation():
         OPERATIONS_VALIDATION_PATH
     )
 
-    return {
-        "executive": executive,
-        "operations": operations,
-    }
+    return make_json_safe(
+        {
+            "executive": executive,
+            "operations": operations,
+        }
+    )
 
 
 # ============================================================
@@ -590,7 +1010,7 @@ def telemetry():
         OPERATIONS_VALIDATION_PATH
     )
 
-    return {
+    return make_json_safe({
 
         "executive":
             executive.get(
@@ -618,7 +1038,7 @@ def telemetry():
                     False
                 ),
         },
-    }
+    })
 
 
 # ============================================================

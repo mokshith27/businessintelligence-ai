@@ -1,0 +1,42 @@
+{
+  "evidence_type": "CAUSAL_OBSERVATIONAL",
+  "treatment": "late_delivery",
+  "outcome": "review_score",
+  "effect_estimate": -1.5702901206375242,
+  "confidence": 0.8,
+  "interval": {
+    "lower": -1.5852547374042358,
+    "upper": -1.5535691855723877
+  },
+  "status": "CAUSAL_EVIDENCE",
+  "interpretation": "Under the observational adjustment assumptions, late delivery is estimated to reduce review score by about 1.570 points (95% bootstrap interval [-1.585, -1.554]).",
+  "method": "Doubly Robust AIPW with propensity adjustment and bootstrap uncertainty",
+  "sample_size": 96359,
+  "treated": 7701,
+  "control": 88658,
+  "overlap": {
+    "min_propensity": 0.19797466354671348,
+    "max_propensity": 0.8079059207634887,
+    "treated_min": 0.2385727077472223,
+    "treated_max": 0.8079059207634887,
+    "control_min": 0.19797466354671348,
+    "control_max": 0.8079059207634887,
+    "overlap_lower": 0.2385727077472223,
+    "overlap_upper": 0.8079059207634887,
+    "overlap_width": 0.5693332130162664,
+    "acceptable_overlap": true
+  },
+  "assumptions": [
+    "No unmeasured confounding after adjustment for included pre-treatment covariates.",
+    "Positivity / overlap holds for the analyzed population.",
+    "Treatment definition correctly captures late delivery.",
+    "Review score is measured consistently.",
+    "Observed data are representative of the target population for this estimate."
+  ],
+  "limitations": [
+    "This is observational causal inference, not a randomized experiment.",
+    "Unmeasured confounding may remain.",
+    "The estimated effect is conditional on the available covariates and overlap.",
+    "Poor overlap causes the engine to downgrade or reject causal interpretation."
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "feedback_id": "46ec53ad-8b28-4222-b756-b9dc8e325e93",
+    "created_at": "2026-08-27 18:02:34.534902",
+    "role": "analyst_demo",
+    "event_id": "37",
+    "event_start_date": "2017-11-23 00:00:00",
+    "event_end_date": "2017-11-29 00:00:00",
+    "driver_type": "category",
+    "driver": "health_beauty",
+    "predicted_status": "ABSTAIN",
+    "predicted_confidence": 0.101,
+    "predicted_decision": "ABSTAIN",
+    "feedback_label": "MISSING_CONTEXT",
+    "corrected_driver": null,
+    "correction_text": "Need campaign and inventory context before assessing this category."
+  },
+  {
+    "feedback_id": "352e866c-2ebf-412b-95f3-e0de3c46d4ef",
+    "created_at": "2026-08-27 18:02:34.530051",
+    "role": "analyst_demo",
+    "event_id": "37",
+    "event_start_date": "2017-11-23 00:00:00",
+    "event_end_date": "2017-11-29 00:00:00",
+    "driver_type": "customer_state",
+    "driver": "RJ",
+    "predicted_status": "CONTRADICTED",
+    "predicted_confidence": 0.171,
+    "predicted_decision": "DO_NOT_ACT",
+    "feedback_label": "CORRECT",
+    "corrected_driver": null,
+    "correction_text": "Evidence supported not acting on RJ."
+  },
+  {
+    "feedback_id": "a5b184a5-4adf-4427-afbd-40ee4e9061ae",
+    "created_at": "2026-08-27 18:02:34.478931",
+    "role": "analyst_demo",
+    "event_id": "37",
+    "event_start_date": "2017-11-23 00:00:00",
+    "event_end_date": "2017-11-29 00:00:00",
+    "driver_type": "customer_state",
+    "driver": "SP",
+    "predicted_status": "WEAK",
+    "predicted_confidence": 0.418,
+    "predicted_decision": "INVESTIGATE",
+    "feedback_label": "CORRECT",
+    "corrected_driver": null,
+    "correction_text": "Observed contribution was useful, but investigation was appropriate."
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "scenario_id": "SCN_001",
+    "scenario_name": "Promotion-driven movement",
+    "ground_truth_driver": "promotion",
+    "expected_direction": "POSITIVE",
+    "context_match": true,
+    "current_metrics": {
+      "gmv": 112530.88999999972,
+      "orders": 877,
+      "aov": 128.31344355758236
+    },
+    "comparison_metrics": {
+      "gmv": 123153.90999999935,
+      "orders": 990,
+      "aov": 124.39788888888823
+    },
+    "movement": {
+      "gmv_change": -10623.019999999626,
+      "orders_change": -113,
+      "aov_change": 3.915554668694128
+    },
+    "mechanism": {
+      "expected_gmv_direction": "POSITIVE",
+      "expected_order_direction": "POSITIVE",
+      "expected_aov_direction": "ANY",
+      "description": "Promotion is expected to support incremental demand, primarily through higher order volume."
+    },
+    "mechanism_evaluation": {
+      "observed_gmv_direction": "NEGATIVE",
+      "observed_orders_direction": "NEGATIVE",
+      "expected_gmv_direction": "POSITIVE",
+      "expected_orders_direction": "POSITIVE",
+      "gmv_match": false,
+      "orders_match": false,
+      "status": "CONTRADICTED"
+    },
+    "overall_result": "CONTRADICTED"
+  },
+  {
+    "scenario_id": "SCN_002",
+    "scenario_name": "Inventory constraint",
+    "ground_truth_driver": "inventory_constraint",
+    "expected_direction": "NEGATIVE",
+    "context_match": true,
+    "current_metrics": {
+      "gmv": 144852.25999999922,
+      "orders": 1013,
+      "aov": 142.99334649555698
+    },
+    "comparison_metrics": {
+      "gmv": 145358.9599999993,
+      "orders": 939,
+      "aov": 154.80187433439755
+    },
+    "movement": {
+      "gmv_change": -506.70000000006985,
+      "orders_change": 74,
+      "aov_change": -11.808527838840575
+    },
+    "mechanism": {
+      "expected_gmv_direction": "NEGATIVE",
+      "expected_order_direction": "NEGATIVE",
+      "expected_aov_direction": "ANY",
+      "description": "Inventory constraints are expected to suppress product availability and therefore reduce order volume."
+    },
+    "mechanism_evaluation": {
+      "observed_gmv_direction": "NEGATIVE",
+      "observed_orders_direction": "POSITIVE",
+      "expected_gmv_direction": "NEGATIVE",
+      "expected_orders_direction": "NEGATIVE",
+      "gmv_match": true,
+      "orders_match": false,
+      "status": "PARTIAL"
+    },
+    "overall_result": "AMBIGUOUS"
+  },
+  {
+    "scenario_id": "SCN_003",
+    "scenario_name": "Promotion-driven movement 2",
+    "ground_truth_driver": "promotion",
+    "expected_direction": "POSITIVE",
+    "context_match": true,
+    "current_metrics": {
+      "gmv": 111930.50999999975,
+      "orders": 807,
+      "aov": 138.69951672862422
+    },
+    "comparison_metrics": {
+      "gmv": 91767.26000000007,
+      "orders": 618,
+      "aov": 148.49071197411016
+    },
+    "movement": {
+      "gmv_change": 20163.24999999968,
+      "orders_change": 189,
+      "aov_change": -9.791195245485937
+    },
+    "mechanism": {
+      "expected_gmv_direction": "POSITIVE",
+      "expected_order_direction": "POSITIVE",
+      "expected_aov_direction": "ANY",
+      "description": "Promotion is expected to support incremental demand, primarily through higher order volume."
+    },
+    "mechanism_evaluation": {
+      "observed_gmv_direction": "POSITIVE",
+      "observed_orders_direction": "POSITIVE",
+      "expected_gmv_direction": "POSITIVE",
+      "expected_orders_direction": "POSITIVE",
+      "gmv_match": true,
+      "orders_match": true,
+      "status": "SUPPORTED"
+    },
+    "overall_result": "SUPPORTED"
+  }
+]

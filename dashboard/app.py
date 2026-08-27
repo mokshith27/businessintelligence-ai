@@ -21,72 +21,25 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-def render_story(story):
-
-    if not story:
-        return
-
-    lines = story.splitlines()
-
-    for line in lines:
-
-        line = line.strip()
-
-        if not line:
-            continue
-
-        if (
-            line.startswith("HEADLINE:")
-            or line.startswith("WHAT CHANGED:")
-            or line.startswith("MAIN DRIVER:")
-            or line.startswith("WHERE:")
-            or line.startswith("WHAT WE KNOW:")
-            or line.startswith("NEXT STEP:")
-            or line.startswith("KPI MOVEMENT:")
-            or line.startswith("ANALYTICAL DECOMPOSITION:")
-            or line.startswith("TOP INVESTIGATION AREAS:")
-            or line.startswith("EVIDENCE:")
-            or line.startswith("ACTIONS:")
-            or line.startswith("DATA QUALITY:")
-        ):
-
-            heading = line.rstrip(":")
-
-            st.markdown(
-                f"### {heading}"
-            )
-
-        elif line.startswith("- "):
-
-            st.markdown(
-                line
-            )
-
-        else:
-
-            # Escape Markdown-special characters that can
-            # interfere with currency/math rendering.
-            safe_line = (
-                line
-                .replace("$", "\\$")
-            )
-
-            st.write(
-                safe_line
-            )
 
 # ============================================================
-# API HELPERS
+# API HELPER
 # ============================================================
 
-# @st.cache_data(ttl=30)
 def api_get(endpoint):
+    """
+    Call FastAPI and return decoded JSON.
+
+    No Streamlit caching is used here because we are actively
+    regenerating insights, narratives and validation artifacts
+    during development.
+    """
 
     try:
 
         response = requests.get(
             f"{API_BASE_URL}{endpoint}",
-            timeout=10,
+            timeout=15,
         )
 
         response.raise_for_status()
@@ -101,9 +54,170 @@ def api_get(endpoint):
 
         return None
 
+def api_post(
+    endpoint,
+    payload,
+):
+    """
+    POST JSON payload to FastAPI.
+    """
+
+    try:
+
+        response = requests.post(
+            f"{API_BASE_URL}{endpoint}",
+            json=payload,
+            timeout=15,
+        )
+
+        response.raise_for_status()
+
+        return response.json()
+
+    except requests.exceptions.HTTPError as exc:
+
+        try:
+            detail = response.json().get(
+                "detail",
+                str(exc),
+            )
+        except Exception:
+            detail = str(exc)
+
+        st.error(
+            f"Backend rejected the request: {detail}"
+        )
+
+        return None
+
+    except requests.exceptions.RequestException as exc:
+
+        st.error(
+            f"Backend connection failed: {exc}"
+        )
+
+        return None
 
 # ============================================================
-# FORMATTING
+# STORY RENDERER
+# ============================================================
+
+def render_story(story):
+    """
+    Render LLM-generated narrative safely.
+
+    We deliberately avoid passing the complete narrative
+    through Markdown because currency values such as R$
+    can be interpreted as math delimiters.
+    """
+
+    if not story:
+        return
+
+    lines = story.splitlines()
+
+    headings = {
+        "HEADLINE:",
+        "WHAT CHANGED:",
+        "MAIN DRIVER:",
+        "WHERE:",
+        "WHAT WE KNOW:",
+        "NEXT STEP:",
+        "KPI MOVEMENT:",
+        "ANALYTICAL DECOMPOSITION:",
+        "TOP INVESTIGATION AREAS:",
+        "EVIDENCE:",
+        "ACTIONS:",
+        "DATA QUALITY:",
+    }
+
+    for raw_line in lines:
+
+        line = raw_line.strip()
+
+        if not line:
+            continue
+
+        # ----------------------------------------------------
+        # Remove Markdown emphasis around headings.
+        # ----------------------------------------------------
+
+        normalized = (
+            line
+            .replace("**", "")
+            .strip()
+        )
+
+        if normalized in headings:
+
+            heading = normalized.rstrip(":")
+
+            st.markdown(
+                f"### {heading}"
+            )
+
+            continue
+
+        # ----------------------------------------------------
+        # Bullets
+        # ----------------------------------------------------
+
+        if line.startswith("- "):
+
+            bullet = line[2:]
+
+            # Escape dollar signs so R$ remains literal.
+            bullet = bullet.replace(
+                "$",
+                r"\$",
+            )
+
+            st.markdown(
+                f"- {bullet}"
+            )
+
+            continue
+
+        # ----------------------------------------------------
+        # Numbered list
+        # ----------------------------------------------------
+
+        if len(line) >= 3:
+
+            first_two = line[:2]
+
+            if (
+                first_two[0].isdigit()
+                and first_two[1] == "."
+            ):
+
+                safe_line = line.replace(
+                    "$",
+                    r"\$",
+                )
+
+                st.markdown(
+                    safe_line
+                )
+
+                continue
+
+        # ----------------------------------------------------
+        # Ordinary text
+        # ----------------------------------------------------
+
+        safe_line = line.replace(
+            "$",
+            r"\$",
+        )
+
+        st.write(
+            safe_line
+        )
+
+
+# ============================================================
+# FORMATTERS
 # ============================================================
 
 def format_brl(value):
@@ -111,7 +225,10 @@ def format_brl(value):
     if value is None:
         return "—"
 
-    value = float(value)
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return "—"
 
     sign = "-" if value < 0 else ""
 
@@ -119,13 +236,22 @@ def format_brl(value):
 
     if value >= 1_000_000:
 
-        return f"{sign}R${value / 1_000_000:.2f}M"
+        return (
+            f"{sign}R$"
+            f"{value / 1_000_000:.2f}M"
+        )
 
     if value >= 1_000:
 
-        return f"{sign}R${value / 1_000:.1f}K"
+        return (
+            f"{sign}R$"
+            f"{value / 1_000:.1f}K"
+        )
 
-    return f"{sign}R${value:,.2f}"
+    return (
+        f"{sign}R$"
+        f"{value:,.2f}"
+    )
 
 
 def format_pct(value):
@@ -133,79 +259,36 @@ def format_pct(value):
     if value is None:
         return "—"
 
-    return f"{float(value):+.1f}%"
+    try:
+        return f"{float(value):+.1f}%"
+    except (TypeError, ValueError):
+        return "—"
 
 
 def status_badge(status):
 
     mapping = {
 
-        "SUPPORTED": "🟢 SUPPORTED",
+        "SUPPORTED":
+            "🟢 SUPPORTED",
 
-        "PLAUSIBLE": "🟡 PLAUSIBLE",
+        "PLAUSIBLE":
+            "🟡 PLAUSIBLE",
 
-        "WEAK": "🟠 WEAK",
+        "WEAK":
+            "🟠 WEAK",
 
-        "ABSTAIN": "⚪ ABSTAIN",
+        "ABSTAIN":
+            "⚪ ABSTAIN",
 
-        "CONTRADICTED": "🔴 CONTRADICTED",
-
+        "CONTRADICTED":
+            "🔴 CONTRADICTED",
     }
 
     return mapping.get(
         str(status).upper(),
         str(status),
     )
-
-
-# ============================================================
-# LOAD DATA
-# ============================================================
-
-insight = api_get(
-    "/api/insights/latest"
-)
-
-executive_story = api_get(
-    "/api/insights/latest/executive"
-)
-
-operations_story = api_get(
-    "/api/insights/latest/operations"
-)
-
-actions_response = api_get(
-    "/api/actions"
-)
-
-telemetry = api_get(
-    "/api/telemetry"
-)
-
-events_response = api_get(
-    "/api/events?limit=25"
-)
-
-
-if insight is None:
-
-    st.stop()
-
-
-# ============================================================
-# EXTRACT INSIGHT
-# ============================================================
-
-kpi = insight["kpi"]
-
-event = insight["event"]
-
-movement = insight["movement"]
-
-drivers = insight.get(
-    "drivers",
-    []
-)
 
 
 # ============================================================
@@ -224,37 +307,168 @@ with st.sidebar:
 
     st.divider()
 
-    persona = st.radio(
-        "View",
+    role = st.radio(
+        "Role",
         [
             "Executive",
             "Operations",
+            "Analyst",
         ],
     )
 
+    role_key = role.lower()
+
     st.divider()
+
+
+# ============================================================
+# LOAD ROLE-AWARE INSIGHT
+# ============================================================
+
+insight = api_get(
+    f"/api/insights/role?role={role_key}"
+)
+
+if insight is None:
+    st.stop()
+
+
+# ============================================================
+# LOAD SUPPORTING DATA
+# ============================================================
+
+# ------------------------------------------------------------
+# The story displayed depends on the role.
+# ------------------------------------------------------------
+
+if role == "Executive":
+
+    story_response = api_get(
+        "/api/insights/latest/executive"
+    )
+
+    story = (
+        story_response.get(
+            "story",
+            ""
+        )
+        if story_response
+        else ""
+    )
+
+elif role == "Operations":
+
+    story_response = api_get(
+        "/api/insights/latest/operations"
+    )
+
+    story = (
+        story_response.get(
+            "story",
+            ""
+        )
+        if story_response
+        else ""
+    )
+
+else:
+
+    # Analyst can inspect both narrative forms.
+    executive_response = api_get(
+        "/api/insights/latest/executive"
+    )
+
+    operations_response = api_get(
+        "/api/insights/latest/operations"
+    )
+
+    executive_story = (
+        executive_response.get(
+            "story",
+            ""
+        )
+        if executive_response
+        else ""
+    )
+
+    operations_story = (
+        operations_response.get(
+            "story",
+            ""
+        )
+        if operations_response
+        else ""
+    )
+
+# ------------------------------------------------------------
+# Supporting endpoints
+# ------------------------------------------------------------
+
+actions_response = api_get(
+    "/api/actions"
+)
+
+telemetry = api_get(
+    "/api/telemetry"
+)
+
+events_response = api_get(
+    "/api/events?limit=25"
+)
+
+
+# ============================================================
+# EXTRACT INSIGHT
+# ============================================================
+
+kpi = insight.get(
+    "kpi",
+    {},
+)
+
+event = insight.get(
+    "event",
+    {},
+)
+
+movement = insight.get(
+    "movement",
+    {},
+)
+
+drivers = insight.get(
+    "drivers",
+    [],
+)
+
+
+# ============================================================
+# SIDEBAR EVENT INFO
+# ============================================================
+
+with st.sidebar:
 
     st.subheader(
         "Current Event"
     )
 
     st.write(
-        f"**{event['start_date']} → "
-        f"{event['end_date']}**"
+        f"**{event.get('start_date', '—')} "
+        f"→ {event.get('end_date', '—')}**"
     )
 
     st.write(
-        f"Priority: "
-        f"**{event['investigation_priority']}**"
+        "Priority: "
+        f"**{event.get('investigation_priority', '—')}**"
     )
 
     st.write(
-        f"Direction: "
-        f"**{event['direction']}**"
+        "Direction: "
+        f"**{event.get('direction', '—')}**"
     )
 
     st.caption(
-        "All values are derived from the "
+        "Values are derived from the "
         "governed analytical insight."
     )
 
@@ -276,27 +490,70 @@ st.caption(
 # KPI HERO
 # ============================================================
 
-change = movement["gmv_change"]
+change = movement.get(
+    "gmv_change"
+)
 
-previous_gmv = movement[
+previous_gmv = movement.get(
     "previous_gmv"
-]
+)
 
-current_gmv = movement[
+current_gmv = movement.get(
     "current_gmv"
-]
+)
 
-if previous_gmv != 0:
+if (
+    previous_gmv is not None
+    and previous_gmv != 0
+    and change is not None
+):
 
     gmv_pct = (
-        change
-        / previous_gmv
+        float(change)
+        / float(previous_gmv)
         * 100
     )
 
 else:
 
     gmv_pct = None
+
+
+current_orders = movement.get(
+    "current_orders"
+)
+
+orders_change = movement.get(
+    "orders_change"
+)
+
+current_aov = movement.get(
+    "current_aov"
+)
+
+previous_aov = movement.get(
+    "previous_aov"
+)
+
+aov_change = movement.get(
+    "aov_change"
+)
+
+if (
+    previous_aov is not None
+    and previous_aov != 0
+    and aov_change is not None
+):
+
+    aov_change_pct = (
+        float(aov_change)
+        / float(previous_aov)
+        * 100
+    )
+
+else:
+
+    aov_change_pct = None
 
 
 col1, col2, col3, col4 = st.columns(
@@ -328,24 +585,24 @@ with col3:
 
     st.metric(
         "Orders",
-        f"{movement['current_orders']:,}",
-        f"{movement['orders_change']:+,}",
+        (
+            f"{int(current_orders):,}"
+            if current_orders is not None
+            else "—"
+        ),
+        (
+            f"{int(orders_change):+,}"
+            if orders_change is not None
+            else None
+        ),
     )
 
 with col4:
 
-    aov_change_pct = (
-        movement["aov_change"]
-        / movement["previous_aov"]
-        * 100
-        if movement["previous_aov"] != 0
-        else None
-    )
-
     st.metric(
         "AOV",
         format_brl(
-            movement["current_aov"]
+            current_aov
         ),
         format_pct(
             aov_change_pct
@@ -360,14 +617,18 @@ st.divider()
 # EVENT BANNER
 # ============================================================
 
-if event["investigation_priority"] == "HIGH":
+priority = event.get(
+    "investigation_priority"
+)
+
+if priority == "HIGH":
 
     st.warning(
         "HIGH-PRIORITY KPI EVENT — "
         "investigation recommended"
     )
 
-elif event["investigation_priority"] == "MEDIUM":
+elif priority == "MEDIUM":
 
     st.info(
         "MEDIUM-PRIORITY KPI EVENT"
@@ -375,48 +636,38 @@ elif event["investigation_priority"] == "MEDIUM":
 
 
 # ============================================================
-# EXECUTIVE VIEW
+# EXECUTIVE
 # ============================================================
 
-if persona == "Executive":
+if role == "Executive":
 
     st.header(
         "Executive Intelligence"
     )
 
-    if executive_story:
-
-        story = executive_story.get(
-            "story",
-            ""
-        )
-
-        safe_story = story.replace(
-            "$",
-            r"\$"
-        )
-
-        render_story(
-            story
-        )
+    render_story(
+        story
+    )
 
     st.divider()
 
     # --------------------------------------------------------
-    # Decomposition chart
+    # Decomposition
     # --------------------------------------------------------
 
     st.subheader(
         "What explains the movement?"
     )
 
-    volume_effect = movement[
-        "volume_effect"
-    ]
+    volume_effect = movement.get(
+        "volume_effect",
+        0,
+    )
 
-    aov_effect = movement[
-        "aov_effect"
-    ]
+    aov_effect = movement.get(
+        "aov_effect",
+        0,
+    )
 
     fig = go.Figure()
 
@@ -466,7 +717,7 @@ if persona == "Executive":
     )
 
     # --------------------------------------------------------
-    # Top observed contributors
+    # Top contributors
     # --------------------------------------------------------
 
     st.subheader(
@@ -476,28 +727,33 @@ if persona == "Executive":
     top_drivers = sorted(
         drivers,
         key=lambda d: abs(
-            d["observed_contribution"]["share"]
+            d.get(
+                "observed_contribution",
+                {},
+            ).get(
+                "share",
+                0,
+            )
         ),
         reverse=True,
     )[:5]
 
     for driver in top_drivers:
 
-        contribution = (
-            driver[
-                "observed_contribution"
-            ]
+        contribution = driver.get(
+            "observed_contribution",
+            {},
         )
 
-        confidence = (
-            driver[
-                "confidence"
-            ]["overall"]
+        confidence = driver.get(
+            "confidence",
+            {},
         )
 
-        status = driver[
-            "status"
-        ]
+        status = driver.get(
+            "status",
+            "UNKNOWN",
+        )
 
         c1, c2, c3, c4 = st.columns(
             [3, 2, 2, 2]
@@ -506,23 +762,23 @@ if persona == "Executive":
         with c1:
 
             st.write(
-                f"**{driver['driver']}**"
+                f"**{driver.get('driver', '—')}**"
             )
 
         with c2:
 
             st.write(
                 format_brl(
-                    contribution[
+                    contribution.get(
                         "gmv_change"
-                    ]
+                    )
                 )
             )
 
         with c3:
 
             st.write(
-                f"{contribution['share'] * 100:.1f}%"
+                f"{contribution.get('share', 0) * 100:.1f}%"
             )
 
         with c4:
@@ -541,10 +797,10 @@ if persona == "Executive":
         "How certain are we?"
     )
 
-    weak_or_uncertain = [
-        d
-        for d in drivers
-        if d["status"]
+    uncertain = [
+        driver
+        for driver in drivers
+        if driver.get("status")
         in {
             "WEAK",
             "ABSTAIN",
@@ -552,53 +808,37 @@ if persona == "Executive":
         }
     ]
 
-    if weak_or_uncertain:
+    if uncertain:
 
         st.info(
             "The engine identifies where the movement "
-            "occurred, but available evidence does "
-            "not establish a verified root cause."
+            "occurred, but available evidence does not "
+            "establish a verified root cause."
         )
 
     else:
 
         st.success(
-            "Available evidence is sufficiently "
-            "strong for the identified hypotheses."
+            "Available evidence is sufficiently strong "
+            "for the identified hypotheses."
         )
 
 
 # ============================================================
-# OPERATIONS VIEW
+# OPERATIONS
 # ============================================================
 
-else:
+elif role == "Operations":
 
     st.header(
         "Operations Intelligence"
     )
 
-    if operations_story:
-
-        story = operations_story.get(
-            "story",
-            ""
-        )
-
-        safe_story = story.replace(
-            "$",
-            r"\$"
-        )
-
-        render_story(
-            story
-        )
+    render_story(
+        story
+    )
 
     st.divider()
-
-    # --------------------------------------------------------
-    # Driver table
-    # --------------------------------------------------------
 
     st.subheader(
         "Driver Investigation"
@@ -608,58 +848,73 @@ else:
 
     for driver in drivers:
 
-        contribution = (
-            driver[
-                "observed_contribution"
-            ]
+        contribution = driver.get(
+            "observed_contribution",
+            {},
         )
 
-        confidence = (
-            driver[
-                "confidence"
-            ]
+        confidence = driver.get(
+            "confidence",
+            {},
         )
 
-        action = (
-            driver[
-                "action"
-            ]
+        action = driver.get(
+            "action",
+            {},
         )
 
         driver_rows.append(
             {
                 "Driver":
-                    driver["driver"],
+                    driver.get(
+                        "driver",
+                        "—",
+                    ),
 
                 "Type":
-                    driver["driver_type"],
+                    driver.get(
+                        "driver_type",
+                        "—",
+                    ),
 
                 "GMV Change":
                     format_brl(
-                        contribution[
+                        contribution.get(
                             "gmv_change"
-                        ]
+                        )
                     ),
 
                 "Contribution":
-                    f"{contribution['share'] * 100:.1f}%",
+                    (
+                        f"{contribution.get('share', 0) * 100:.1f}%"
+                    ),
 
                 "Confidence":
                     round(
-                        confidence[
-                            "overall"
-                        ],
+                        confidence.get(
+                            "overall",
+                            0,
+                        ),
                         3,
                     ),
 
                 "Evidence":
-                    driver["status"],
+                    driver.get(
+                        "status",
+                        "—",
+                    ),
 
                 "Decision":
-                    action["decision"],
+                    action.get(
+                        "decision",
+                        "—",
+                    ),
 
                 "Owner":
-                    action["owner"],
+                    action.get(
+                        "owner",
+                        "—",
+                    ),
             }
         )
 
@@ -671,21 +926,15 @@ else:
             hide_index=True,
         )
 
-    # --------------------------------------------------------
-    # Action center
-    # --------------------------------------------------------
-
     st.subheader(
         "Action Center"
     )
 
     if actions_response:
 
-        actions = (
-            actions_response.get(
-                "actions",
-                []
-            )
+        actions = actions_response.get(
+            "actions",
+            [],
         )
 
         actionable = [
@@ -693,55 +942,565 @@ else:
             for action in actions
             if action.get(
                 "decision"
-            )
-            in {
+            ) in {
                 "ACTIONABLE",
                 "ACTION_WITH_VALIDATION",
                 "INVESTIGATE",
             }
         ]
 
-        for action in actionable[:5]:
+        if actionable:
 
-            decision = action[
-                "decision"
-            ]
+            for action in actionable[:5]:
 
-            if decision == "ACTIONABLE":
-
-                st.success(
-                    f"**{action['driver']}** — "
-                    f"{action['action']}"
+                decision = action.get(
+                    "decision"
                 )
 
-            elif decision == "INVESTIGATE":
+                if decision == "ACTIONABLE":
 
-                st.warning(
-                    f"**Investigate {action['driver']}** — "
-                    f"{action['action']}"
+                    st.success(
+                        f"**{action.get('driver', '—')}** — "
+                        f"{action.get('action', '')}"
+                    )
+
+                elif decision == "INVESTIGATE":
+
+                    st.warning(
+                        f"**Investigate "
+                        f"{action.get('driver', '—')}** — "
+                        f"{action.get('action', '')}"
+                    )
+
+                else:
+
+                    st.info(
+                        f"**{action.get('driver', '—')}** — "
+                        f"{action.get('action', '')}"
+                    )
+
+                st.caption(
+                    f"Owner: {action.get('owner', '—')} | "
+                    f"Monitor: {action.get('monitoring_plan', '—')}"
+                )
+
+        else:
+
+            st.info(
+                "No actionable recommendations were "
+                "returned for this event."
+            )
+
+
+# ============================================================
+# ANALYST
+# ============================================================
+
+else:
+
+    st.header(
+        "Analyst Intelligence"
+    )
+
+    st.caption(
+        "Full evidence, lineage and causal diagnostics"
+    )
+
+    # --------------------------------------------------------
+    # Executive story
+    # --------------------------------------------------------
+
+    st.subheader(
+        "Executive narrative"
+    )
+
+    render_story(
+        executive_story
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # Operations story
+    # --------------------------------------------------------
+
+    st.subheader(
+        "Operations narrative"
+    )
+
+    render_story(
+        operations_story
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # Driver table
+    # --------------------------------------------------------
+
+    st.subheader(
+        "Full driver evidence"
+    )
+
+    analyst_rows = []
+
+    for driver in drivers:
+
+        contribution = driver.get(
+            "observed_contribution",
+            {},
+        )
+
+        confidence = driver.get(
+            "confidence",
+            {},
+        )
+
+        action = driver.get(
+            "action",
+            {},
+        )
+
+        analyst_rows.append(
+            {
+                "Driver":
+                    driver.get(
+                        "driver",
+                        "—",
+                    ),
+
+                "Type":
+                    driver.get(
+                        "driver_type",
+                        "—",
+                    ),
+
+                "GMV Change":
+                    format_brl(
+                        contribution.get(
+                            "gmv_change"
+                        )
+                    ),
+
+                "Contribution %":
+                    (
+                        contribution.get(
+                            "share",
+                            0,
+                        )
+                        * 100
+                    ),
+
+                "Confidence":
+                    confidence.get(
+                        "overall",
+                        0,
+                    ),
+
+                "Status":
+                    driver.get(
+                        "status",
+                        "—",
+                    ),
+
+                "Decision":
+                    action.get(
+                        "decision",
+                        "—",
+                    ),
+            }
+        )
+
+    if analyst_rows:
+
+        st.dataframe(
+            analyst_rows,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    # ============================================================
+    # ANALYST FEEDBACK
+    # ============================================================
+
+    if role == "Analyst":
+
+        st.divider()
+
+        st.header(
+            "Analyst Feedback"
+        )
+
+        st.caption(
+            "Use feedback to evaluate the quality of the "
+            "engine's driver assessment."
+        )
+
+        if not drivers:
+
+            st.info(
+                "No drivers are available for feedback."
+            )
+
+        else:
+
+            for index, driver in enumerate(
+                drivers[:5]
+            ):
+
+                contribution = driver.get(
+                    "observed_contribution",
+                    {},
+                )
+
+                confidence = driver.get(
+                    "confidence",
+                    {},
+                )
+
+                action = driver.get(
+                    "action",
+                    {},
+                )
+
+                driver_name = driver.get(
+                    "driver",
+                    "—",
+                )
+
+                driver_type = driver.get(
+                    "driver_type",
+                    "—",
+                )
+
+                status = driver.get(
+                    "status",
+                    "—",
+                )
+
+                overall_confidence = confidence.get(
+                    "overall",
+                    0,
+                )
+
+                decision = action.get(
+                    "decision"
+                )
+
+                # ------------------------------------------------
+                # Unique form per driver
+                # ------------------------------------------------
+
+                with st.expander(
+                    f"{driver_name} — "
+                    f"{status_badge(status)}",
+                    expanded=(index == 0),
+                ):
+
+                    c1, c2, c3, c4 = st.columns(
+                        4
+                    )
+
+                    with c1:
+
+                        st.write(
+                            f"**Type**  \n"
+                            f"{driver_type}"
+                        )
+
+                    with c2:
+
+                        st.write(
+                            f"**Contribution**  \n"
+                            f"{contribution.get('share', 0) * 100:.2f}%"
+                        )
+
+                    with c3:
+
+                        st.write(
+                            f"**Confidence**  \n"
+                            f"{overall_confidence:.3f}"
+                        )
+
+                    with c4:
+
+                        st.write(
+                            f"**Decision**  \n"
+                            f"{decision or '—'}"
+                        )
+
+                    st.write(
+                        "Was this assessment useful?"
+                    )
+
+                    feedback_key = (
+                        f"feedback_{index}_{driver_type}_{driver_name}"
+                    )
+
+                    label = st.radio(
+                        "Feedback",
+                        [
+                            "Correct",
+                            "Incorrect",
+                            "Missing context",
+                        ],
+                        key=feedback_key,
+                        horizontal=True,
+                    )
+
+                    correction_text = st.text_area(
+                        "Correction / additional context",
+                        key=f"{feedback_key}_text",
+                        placeholder=(
+                            "Explain what was wrong, "
+                            "or what evidence was missing..."
+                        ),
+                    )
+
+                    corrected_driver = st.text_input(
+                        "Correct driver (optional)",
+                        key=f"{feedback_key}_driver",
+                        placeholder=(
+                            "Only fill this if the predicted driver "
+                            "was incorrect."
+                        ),
+                    )
+
+                    if st.button(
+                        "Submit feedback",
+                        key=f"{feedback_key}_submit",
+                    ):
+
+                        feedback_map = {
+
+                            "Correct":
+                                "CORRECT",
+
+                            "Incorrect":
+                                "INCORRECT",
+
+                            "Missing context":
+                                "MISSING_CONTEXT",
+                        }
+
+                        payload = {
+
+                            "role":
+                                role.lower(),
+
+                            "event_id":
+                                str(
+                                    event.get(
+                                        "event_id",
+                                        ""
+                                    )
+                                ),
+
+                            "event_start_date":
+                                event.get(
+                                    "start_date"
+                                ),
+
+                            "event_end_date":
+                                event.get(
+                                    "end_date"
+                                ),
+
+                            "driver_type":
+                                driver_type,
+
+                            "driver":
+                                driver_name,
+
+                            "predicted_status":
+                                status,
+
+                            "predicted_confidence":
+                                float(
+                                    overall_confidence
+                                ),
+
+                            "predicted_decision":
+                                decision,
+
+                            "feedback_label":
+                                feedback_map[
+                                    label
+                                ],
+
+                            "corrected_driver":
+                                (
+                                    corrected_driver.strip()
+                                    or None
+                                ),
+
+                            "correction_text":
+                                (
+                                    correction_text.strip()
+                                    or None
+                                ),
+                        }
+
+                        result = api_post(
+                            "/api/feedback",
+                            payload,
+                        )
+
+                        if result:
+
+                            st.success(
+                                "Feedback recorded successfully."
+                            )
+
+                            st.json(
+                                result
+                            )
+
+                            st.rerun()
+    
+    # ============================================================
+    # FEEDBACK CALIBRATION
+    # ============================================================
+
+    if role == "Analyst":
+
+        st.subheader(
+            "Feedback Calibration"
+        )
+
+        calibration = api_get(
+            "/api/calibration"
+        )
+
+        if calibration:
+
+            c1, c2, c3, c4 = st.columns(
+                4
+            )
+
+            with c1:
+
+                st.metric(
+                    "Feedback records",
+                    calibration.get(
+                        "feedback_count",
+                        0,
+                    ),
+                )
+
+            with c2:
+
+                st.metric(
+                    "Correct",
+                    calibration.get(
+                        "correct",
+                        0,
+                    ),
+                )
+
+            with c3:
+
+                st.metric(
+                    "Incorrect",
+                    calibration.get(
+                        "incorrect",
+                        0,
+                    ),
+                )
+
+            with c4:
+
+                st.metric(
+                    "Missing context",
+                    calibration.get(
+                        "missing_context",
+                        0,
+                    ),
+                )
+
+            status = calibration.get(
+                "status",
+                "UNKNOWN",
+            )
+
+            if status == "CALIBRATION_AVAILABLE":
+
+                st.success(
+                    "Sufficient feedback is available "
+                    "for calibration analysis."
                 )
 
             else:
 
                 st.info(
-                    f"**{action['driver']}** — "
-                    f"{action['action']}"
+                    "The system is still collecting feedback. "
+                    "Production confidence is not automatically "
+                    "overridden from small samples."
                 )
 
-            st.caption(
-                f"Owner: {action['owner']} | "
-                f"Monitor: {action['monitoring_plan']}"
+            bins = calibration.get(
+                "bins",
+                [],
             )
 
+            if bins:
+
+                st.write(
+                    "**Confidence calibration**"
+                )
+
+                calibration_rows = []
+
+                for item in bins:
+
+                    calibration_rows.append(
+                        {
+                            "Confidence range":
+                                item.get(
+                                    "confidence_range"
+                                ),
+
+                            "Observations":
+                                item.get(
+                                    "count"
+                                ),
+
+                            "Predicted confidence":
+                                item.get(
+                                    "mean_predicted_confidence"
+                                ),
+
+                            "Observed accuracy":
+                                item.get(
+                                    "observed_accuracy"
+                                ),
+
+                            "Calibration gap":
+                                item.get(
+                                    "calibration_gap"
+                                ),
+                        }
+                    )
+
+                st.dataframe(
+                    calibration_rows,
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
 # ============================================================
-# EVIDENCE PANEL
+# EVIDENCE & GOVERNANCE
 # ============================================================
 
 st.divider()
 
 st.header(
     "Evidence & Governance"
+)
+
+data_quality = insight.get(
+    "data_quality",
+    {},
 )
 
 e1, e2, e3, e4 = st.columns(
@@ -752,9 +1511,7 @@ with e1:
 
     st.metric(
         "Commerce Coverage",
-        insight[
-            "data_quality"
-        ].get(
+        data_quality.get(
             "commerce_source",
             "UNKNOWN",
         ),
@@ -766,9 +1523,7 @@ with e2:
         "Review Text",
         (
             "Available"
-            if insight[
-                "data_quality"
-            ].get(
+            if data_quality.get(
                 "review_text_available",
                 False,
             )
@@ -782,9 +1537,7 @@ with e3:
         "Business Context",
         (
             "Available"
-            if insight[
-                "data_quality"
-            ].get(
+            if data_quality.get(
                 "business_context_available",
                 False,
             )
@@ -796,9 +1549,10 @@ with e4:
 
     st.metric(
         "Event Priority",
-        event[
-            "investigation_priority"
-        ],
+        event.get(
+            "investigation_priority",
+            "UNKNOWN",
+        ),
     )
 
 
@@ -812,7 +1566,7 @@ with st.expander(
 
     lineage = insight.get(
         "lineage",
-        {}
+        {},
     )
 
     st.write(
@@ -822,7 +1576,7 @@ with st.expander(
     st.write(
         lineage.get(
             "raw_sources",
-            []
+            [],
         )
     )
 
@@ -833,7 +1587,7 @@ with st.expander(
     st.write(
         lineage.get(
             "methods",
-            []
+            [],
         )
     )
 
@@ -844,7 +1598,7 @@ with st.expander(
     st.write(
         lineage.get(
             "analytical_tables",
-            []
+            [],
         )
     )
 
@@ -858,8 +1612,8 @@ with st.expander(
 ):
 
     policy = insight.get(
-        "llm_policy",
-        {}
+        "llm_governance",
+        {},
     )
 
     st.write(
@@ -874,7 +1628,7 @@ with st.expander(
     st.write(
         policy.get(
             "allowed_llm_tasks",
-            []
+            [],
         )
     )
 
@@ -885,7 +1639,7 @@ with st.expander(
     st.write(
         policy.get(
             "forbidden_llm_tasks",
-            []
+            [],
         )
     )
 
@@ -906,18 +1660,14 @@ with st.expander(
             2
         )
 
-        executive_telemetry = (
-            telemetry.get(
-                "executive",
-                {}
-            )
+        executive_telemetry = telemetry.get(
+            "executive",
+            {},
         )
 
-        operations_telemetry = (
-            telemetry.get(
-                "operations",
-                {}
-            )
+        operations_telemetry = telemetry.get(
+            "operations",
+            {},
         )
 
         with tc1:
@@ -940,20 +1690,30 @@ with st.expander(
                 operations_telemetry
             )
 
-        validation = (
-            telemetry.get(
-                "validation",
-                {}
+        validation = telemetry.get(
+            "validation",
+            {},
+        )
+
+        executive_passed = (
+            validation.get(
+                "executive_passed",
+                False,
             )
+            is True
+        )
+
+        operations_passed = (
+            validation.get(
+                "operations_passed",
+                False,
+            )
+            is True
         )
 
         if (
-            validation.get(
-                "executive_passed"
-            )
-            and validation.get(
-                "operations_passed"
-            )
+            executive_passed
+            and operations_passed
         ):
 
             st.success(
@@ -967,6 +1727,10 @@ with st.expander(
                 "Narrative validation failed."
             )
 
+            st.json(
+                validation
+            )
+
 
 # ============================================================
 # EVENT HISTORY
@@ -978,11 +1742,9 @@ with st.expander(
 
     if events_response:
 
-        historical_events = (
-            events_response.get(
-                "events",
-                []
-            )
+        historical_events = events_response.get(
+            "events",
+            [],
         )
 
         st.dataframe(
@@ -1001,5 +1763,6 @@ st.divider()
 st.caption(
     "BusinessIntelligence.ai — "
     "Analytical truth is computed deterministically; "
-    "the LLM is used only for evidence-grounded narrative synthesis."
+    "the LLM is used only for evidence-grounded "
+    "narrative synthesis."
 )

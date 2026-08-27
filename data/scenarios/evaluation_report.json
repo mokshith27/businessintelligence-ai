@@ -1,0 +1,68 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "SCN_001",
+      "ground_truth_driver": "promotion",
+      "engine_status": "ABSTAIN",
+      "top_driver": "promotion",
+      "context_present": true,
+      "mechanism_supported": true,
+      "action_decision": "ABSTAIN",
+      "components": {
+        "driver_identification": 1,
+        "context_alignment": 1,
+        "status_handling": 1,
+        "safe_abstention": 1,
+        "action_safety": 1,
+        "action_acceptability": 1
+      },
+      "score": 1.0
+    },
+    {
+      "scenario_id": "SCN_002",
+      "ground_truth_driver": "inventory_constraint",
+      "engine_status": "ABSTAIN",
+      "top_driver": "inventory_constraint",
+      "context_present": true,
+      "mechanism_supported": true,
+      "action_decision": "ABSTAIN",
+      "components": {
+        "driver_identification": 1,
+        "context_alignment": 1,
+        "status_handling": 1,
+        "safe_abstention": 1,
+        "action_safety": 1,
+        "action_acceptability": 1
+      },
+      "score": 1.0
+    },
+    {
+      "scenario_id": "SCN_003",
+      "ground_truth_driver": "promotion",
+      "engine_status": "SUPPORTED",
+      "top_driver": "promotion",
+      "context_present": true,
+      "mechanism_supported": true,
+      "action_decision": "ACTION_WITH_VALIDATION",
+      "components": {
+        "driver_identification": 1,
+        "context_alignment": 1,
+        "status_handling": 1,
+        "safe_abstention": 1,
+        "action_safety": 1,
+        "action_acceptability": 1
+      },
+      "score": 1.0
+    }
+  ],
+  "summary": {
+    "scenarios": 3,
+    "driver_identification_rate": 1.0,
+    "context_alignment_rate": 1.0,
+    "status_handling_rate": 1.0,
+    "safe_abstention_rate": 1.0,
+    "action_safety_rate": 1.0,
+    "action_acceptability_rate": 1.0,
+    "average_score": 1.0
+  }
+}

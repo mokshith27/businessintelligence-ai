@@ -1,0 +1,228 @@
+[
+  {
+    "scenario_id": "SCN_001",
+    "scenario_name": "Promotion-driven movement",
+    "ground_truth_driver": "promotion",
+    "event_period": {
+      "start": "2018-02-02",
+      "end": "2018-02-05"
+    },
+    "comparison_period": {
+      "start": "2018-01-29",
+      "end": "2018-02-01"
+    },
+    "current_metrics": {
+      "gmv": 112530.88999999972,
+      "orders": 877,
+      "aov": 128.31344355758236
+    },
+    "comparison_metrics": {
+      "gmv": 123153.90999999935,
+      "orders": 990,
+      "aov": 124.39788888888823
+    },
+    "movement": {
+      "gmv_change": -10623.019999999626,
+      "orders_change": -113,
+      "aov_change": 3.915554668694128
+    },
+    "observed_direction": {
+      "gmv": "NEGATIVE",
+      "orders": "NEGATIVE"
+    },
+    "context_signals": {
+      "promotion_present": true,
+      "inventory_constraint_present": false,
+      "external_event_present": false,
+      "campaigns": [
+        "holiday_campaign"
+      ],
+      "avg_competitor_price_index": 1.0150000000000001
+    },
+    "hypotheses": [
+      {
+        "driver": "promotion",
+        "score": 0.3,
+        "status": "WEAK",
+        "reasons": [
+          "Promotion was present during the scenario.",
+          "Orders decreased, inconsistent with the expected promotion demand mechanism."
+        ]
+      },
+      {
+        "driver": "inventory_constraint",
+        "score": 0.0,
+        "status": "ABSTAIN",
+        "reasons": [
+          "No inventory constraint signal was found."
+        ]
+      }
+    ],
+    "top_hypothesis": {
+      "driver": "promotion",
+      "score": 0.3,
+      "status": "WEAK",
+      "reasons": [
+        "Promotion was present during the scenario.",
+        "Orders decreased, inconsistent with the expected promotion demand mechanism."
+      ]
+    },
+    "overall_status": "ABSTAIN",
+    "recommended_action": {
+      "decision": "ABSTAIN",
+      "lever": null,
+      "action": "Insufficient evidence for an operational intervention.",
+      "owner": "Analyst"
+    }
+  },
+  {
+    "scenario_id": "SCN_002",
+    "scenario_name": "Inventory constraint",
+    "ground_truth_driver": "inventory_constraint",
+    "event_period": {
+      "start": "2018-06-06",
+      "end": "2018-06-10"
+    },
+    "comparison_period": {
+      "start": "2018-06-01",
+      "end": "2018-06-05"
+    },
+    "current_metrics": {
+      "gmv": 144852.25999999922,
+      "orders": 1013,
+      "aov": 142.99334649555698
+    },
+    "comparison_metrics": {
+      "gmv": 145358.9599999993,
+      "orders": 939,
+      "aov": 154.80187433439755
+    },
+    "movement": {
+      "gmv_change": -506.70000000006985,
+      "orders_change": 74,
+      "aov_change": -11.808527838840575
+    },
+    "observed_direction": {
+      "gmv": "NEGATIVE",
+      "orders": "POSITIVE"
+    },
+    "context_signals": {
+      "promotion_present": false,
+      "inventory_constraint_present": true,
+      "external_event_present": false,
+      "campaigns": [],
+      "avg_competitor_price_index": 1.08
+    },
+    "hypotheses": [
+      {
+        "driver": "inventory_constraint",
+        "score": 0.3,
+        "status": "WEAK",
+        "reasons": [
+          "Inventory constraint was present during the scenario.",
+          "Orders increased, inconsistent with the expected inventory constraint mechanism."
+        ]
+      },
+      {
+        "driver": "promotion",
+        "score": 0.0,
+        "status": "ABSTAIN",
+        "reasons": [
+          "No promotion signal was found."
+        ]
+      }
+    ],
+    "top_hypothesis": {
+      "driver": "inventory_constraint",
+      "score": 0.3,
+      "status": "WEAK",
+      "reasons": [
+        "Inventory constraint was present during the scenario.",
+        "Orders increased, inconsistent with the expected inventory constraint mechanism."
+      ]
+    },
+    "overall_status": "ABSTAIN",
+    "recommended_action": {
+      "decision": "ABSTAIN",
+      "lever": null,
+      "action": "Insufficient evidence for an operational intervention.",
+      "owner": "Analyst"
+    }
+  },
+  {
+    "scenario_id": "SCN_003",
+    "scenario_name": "Promotion-driven movement 2",
+    "ground_truth_driver": "promotion",
+    "event_period": {
+      "start": "2018-07-18",
+      "end": "2018-07-20"
+    },
+    "comparison_period": {
+      "start": "2018-07-15",
+      "end": "2018-07-17"
+    },
+    "current_metrics": {
+      "gmv": 111930.50999999975,
+      "orders": 807,
+      "aov": 138.69951672862422
+    },
+    "comparison_metrics": {
+      "gmv": 91767.26000000007,
+      "orders": 618,
+      "aov": 148.49071197411016
+    },
+    "movement": {
+      "gmv_change": 20163.24999999968,
+      "orders_change": 189,
+      "aov_change": -9.791195245485937
+    },
+    "observed_direction": {
+      "gmv": "POSITIVE",
+      "orders": "POSITIVE"
+    },
+    "context_signals": {
+      "promotion_present": true,
+      "inventory_constraint_present": false,
+      "external_event_present": false,
+      "campaigns": [
+        "summer_campaign"
+      ],
+      "avg_competitor_price_index": 0.98
+    },
+    "hypotheses": [
+      {
+        "driver": "promotion",
+        "score": 0.8,
+        "status": "SUPPORTED",
+        "reasons": [
+          "Promotion was present during the scenario.",
+          "Orders increased, consistent with the expected promotion demand mechanism."
+        ]
+      },
+      {
+        "driver": "inventory_constraint",
+        "score": 0.0,
+        "status": "ABSTAIN",
+        "reasons": [
+          "No inventory constraint signal was found."
+        ]
+      }
+    ],
+    "top_hypothesis": {
+      "driver": "promotion",
+      "score": 0.8,
+      "status": "SUPPORTED",
+      "reasons": [
+        "Promotion was present during the scenario.",
+        "Orders increased, consistent with the expected promotion demand mechanism."
+      ]
+    },
+    "overall_status": "SUPPORTED",
+    "recommended_action": {
+      "decision": "ACTION_WITH_VALIDATION",
+      "lever": "marketing campaign",
+      "action": "Evaluate incremental campaign impact and consider continuing or optimizing the promotion.",
+      "owner": "Marketing"
+    }
+  }
+]

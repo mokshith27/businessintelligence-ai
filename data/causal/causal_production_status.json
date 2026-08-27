@@ -1,0 +1,10 @@
+{
+  "treatment": "late_delivery",
+  "outcome": "review_score",
+  "effect_estimate": -1.5702901206375242,
+  "confidence": 0.8,
+  "production_status": "CAUSAL_EVIDENCE_ACCEPTED",
+  "decision": "SUPPORT_ACTION",
+  "reason": "The causal estimate passed the implemented overlap and basic balance diagnostics.",
+  "diagnostic_status": "CAUSAL_RESULT_DIAGNOSTICALLY_ACCEPTABLE"
+}

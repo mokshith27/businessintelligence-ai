@@ -1,0 +1,48 @@
+{
+  "status": "COLLECTING_FEEDBACK",
+  "feedback_count": 3,
+  "correct": 2,
+  "incorrect": 0,
+  "missing_context": 1,
+  "definite_feedback": 2,
+  "empirical_accuracy": 1.0,
+  "bins": [
+    {
+      "confidence_range": "0.0-0.2",
+      "count": 1,
+      "mean_predicted_confidence": 0.171,
+      "observed_accuracy": 1.0,
+      "calibration_gap": 0.829
+    },
+    {
+      "confidence_range": "0.4-0.6",
+      "count": 1,
+      "mean_predicted_confidence": 0.418,
+      "observed_accuracy": 1.0,
+      "calibration_gap": 0.582
+    }
+  ],
+  "driver_calibration": [
+    {
+      "driver_type": "customer_state",
+      "driver": "RJ",
+      "feedback_count": 1,
+      "mean_confidence": 0.171,
+      "observed_accuracy": 1.0,
+      "calibration_gap": 0.829
+    },
+    {
+      "driver_type": "customer_state",
+      "driver": "SP",
+      "feedback_count": 1,
+      "mean_confidence": 0.418,
+      "observed_accuracy": 1.0,
+      "calibration_gap": 0.582
+    }
+  ],
+  "calibration_policy": {
+    "minimum_feedback": 5,
+    "automatic_confidence_override": false,
+    "reason": "Feedback is used first to measure calibration. Production confidence is not automatically overwritten from small feedback samples."
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "causal_result": {
+    "effect": -1.5702901206375242,
+    "ci_lower": -1.5852547374042358,
+    "ci_upper": -1.5535691855723877
+  },
+  "sample": {
+    "total": 96359,
+    "treated": 7701,
+    "control": 88658,
+    "review_mean": 4.155553710603058,
+    "review_std": 1.2851076795269363,
+    "sufficient_total": true,
+    "sufficient_treated": true,
+    "sufficient_control": true
+  },
+  "propensity": {
+    "min_propensity": 0.19797466354671348,
+    "max_propensity": 0.8079059207634887,
+    "overlap_width": 0.5693332130162664,
+    "acceptable": true
+  },
+  "basic_balance": {
+    "purchase_month": -0.08979571588116703,
+    "purchase_dow": -0.05226006054477081
+  },
+  "assessment": {
+    "original_status": "CAUSAL_EVIDENCE",
+    "original_confidence": 0.8,
+    "diagnostic_status": "CAUSAL_RESULT_DIAGNOSTICALLY_ACCEPTABLE",
+    "diagnostic_confidence": 0.8,
+    "issues": [],
+    "warnings": []
+  }
+}
