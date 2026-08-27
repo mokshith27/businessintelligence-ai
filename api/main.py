@@ -69,6 +69,61 @@ OPERATIONS_VALIDATION_PATH = (
     / "operations_validation.json"
 )
 
+SCENARIO_ENGINE_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "scenarios"
+    / "scenario_engine_results.json"
+)
+
+SCENARIO_EVALUATION_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "scenarios"
+    / "scenario_evaluation.json"
+)
+
+ENGINE_EVALUATION_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "scenarios"
+    / "engine_evaluation.json"
+)
+
+SPARSE_HISTORY_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "scenarios"
+    / "sparse_history_scenario.json"
+)
+
+CAUSAL_RESULT_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "causal"
+    / "delivery_review_causal_effect.json"
+)
+
+CAUSAL_DIAGNOSTICS_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "causal"
+    / "causal_diagnostics.json"
+)
+
+CAUSAL_STATUS_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "causal"
+    / "causal_production_status.json"
+)
+
+CALIBRATION_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "feedback"
+    / "calibration_report.json"
+)
 
 # ============================================================
 # DATABASE HELPERS
@@ -481,6 +536,83 @@ def get_calibration():
 
         con.close()
 
+@app.get("/api/validation/scenarios")
+def get_scenario_validation():
+
+    return make_json_safe(
+        {
+            "engine":
+                optional_json_file(
+                    SCENARIO_ENGINE_PATH
+                ),
+
+            "evaluation":
+                optional_json_file(
+                    SCENARIO_EVALUATION_PATH
+                ),
+
+            "engine_evaluation":
+                optional_json_file(
+                    ENGINE_EVALUATION_PATH
+                ),
+        }
+    )
+
+@app.get("/api/validation/sparse-history")
+def get_sparse_history():
+
+    result = optional_json_file(
+        SPARSE_HISTORY_PATH
+    )
+
+    if result is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Sparse-history scenario not found.",
+        )
+
+    return result
+
+@app.get("/api/validation/causal")
+def get_causal_validation():
+
+    return make_json_safe(
+        {
+            "result":
+                optional_json_file(
+                    CAUSAL_RESULT_PATH
+                ),
+
+            "diagnostics":
+                optional_json_file(
+                    CAUSAL_DIAGNOSTICS_PATH
+                ),
+
+            "production_status":
+                optional_json_file(
+                    CAUSAL_STATUS_PATH
+                ),
+        }
+    )
+
+@app.get("/api/validation/feedback")
+def get_feedback_validation():
+
+    result = optional_json_file(
+        CALIBRATION_PATH
+    )
+
+    if result is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Calibration report not found.",
+        )
+
+    return result
+
+
 
 def get_connection():
 
@@ -524,6 +656,33 @@ def read_json(path):
             status_code=500,
             detail=f"Invalid JSON: {path.name}",
         )
+
+def optional_json_file(path):
+    """
+    Return JSON contents when available.
+    Return None when the artifact does not exist.
+    """
+
+    if not path.exists():
+        return None
+
+    try:
+        return make_json_safe(
+            json.loads(
+                path.read_text(
+                    encoding="utf-8"
+                )
+            )
+        )
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] Could not read {path}: {exc}"
+        )
+
+        return None
+
 
 
 def sanitize_value(value):

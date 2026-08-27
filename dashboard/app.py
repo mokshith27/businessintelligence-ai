@@ -54,6 +54,7 @@ def api_get(endpoint):
 
         return None
 
+
 def api_post(
     endpoint,
     payload,
@@ -101,6 +102,7 @@ def api_post(
 # ============================================================
 # STORY RENDERER
 # ============================================================
+
 
 def render_story(story):
     """
@@ -713,7 +715,7 @@ if role == "Executive":
 
     st.plotly_chart(
         fig,
-        use_container_width=True,
+        width="stretch",
     )
 
     # --------------------------------------------------------
@@ -922,7 +924,7 @@ elif role == "Operations":
 
         st.dataframe(
             driver_rows,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -1115,7 +1117,7 @@ else:
 
         st.dataframe(
             analyst_rows,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
@@ -1357,7 +1359,7 @@ else:
                             )
 
                             st.rerun()
-    
+
     # ============================================================
     # FEEDBACK CALIBRATION
     # ============================================================
@@ -1484,7 +1486,7 @@ else:
 
                 st.dataframe(
                     calibration_rows,
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
 
@@ -1509,12 +1511,22 @@ e1, e2, e3, e4 = st.columns(
 
 with e1:
 
+    commerce_coverage = data_quality.get(
+        "commerce_source",
+        "UNKNOWN",
+    )
+
+    if commerce_coverage == "NORMAL_DATA_COVERAGE":
+        commerce_display = "Normal"
+    else:
+        commerce_display = commerce_coverage.replace(
+            "_",
+            " ",
+        ).title()
+
     st.metric(
         "Commerce Coverage",
-        data_quality.get(
-            "commerce_source",
-            "UNKNOWN",
-        ),
+        commerce_display,
     )
 
 with e2:
@@ -1749,10 +1761,941 @@ with st.expander(
 
         st.dataframe(
             historical_events,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
         )
 
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+st.divider()
+
+st.caption(
+    "BusinessIntelligence.ai — "
+    "Analytical truth is computed deterministically; "
+    "the LLM is used only for evidence-grounded "
+    "narrative synthesis."
+)
+
+# ============================================================
+# VALIDATION CENTER
+# ============================================================
+
+st.divider()
+
+with st.expander(
+    "🧪 Validation Center"
+):
+
+    st.header(
+        "System Validation"
+    )
+
+    # ========================================================
+    # CONTROLLED SCENARIOS
+    # ========================================================
+
+    st.subheader(
+        "Controlled Scenario Evaluation"
+    )
+
+    scenarios = api_get(
+        "/api/validation/scenarios"
+    )
+
+    if scenarios:
+
+        evaluation = scenarios.get(
+            "engine_evaluation",
+            []
+        )
+
+        # ----------------------------------------------------
+        # The engine evaluation artifact is currently a list
+        # of per-scenario records. Some future versions may
+        # wrap it inside {"results": [...], "summary": {...}}.
+        # Normalize both forms.
+        # ----------------------------------------------------
+
+        if isinstance(
+            evaluation,
+            dict,
+        ):
+
+            scenario_results = evaluation.get(
+                "results",
+                evaluation.get(
+                    "scenarios",
+                    [],
+                ),
+            )
+
+            provided_summary = evaluation.get(
+                "summary",
+                {},
+            )
+
+        elif isinstance(
+            evaluation,
+            list,
+        ):
+
+            scenario_results = evaluation
+            provided_summary = {}
+
+        else:
+
+            scenario_results = []
+            provided_summary = {}
+
+        # ----------------------------------------------------
+        # Normalize scenario rows and compute summary from the
+        # actual records when no summary is supplied.
+        # ----------------------------------------------------
+
+        normalized_results = []
+
+        for item in scenario_results:
+
+            if not isinstance(
+                item,
+                dict,
+            ):
+                continue
+
+            scenario_id = item.get(
+                "scenario_id",
+                item.get(
+                    "scenario",
+                    "—",
+                ),
+            )
+
+            ground_truth = item.get(
+                "ground_truth_driver",
+                item.get(
+                    "ground_truth",
+                    "—",
+                ),
+            )
+
+            top_driver = item.get(
+                "top_engine_driver",
+                item.get(
+                    "top_driver",
+                    item.get(
+                        "driver",
+                        "—",
+                    ),
+                ),
+            )
+
+            status = item.get(
+                "status",
+                item.get(
+                    "engine_status",
+                    "—",
+                ),
+            )
+
+            decision = item.get(
+                "action_decision",
+                item.get(
+                    "decision",
+                    item.get(
+                        "action",
+                        "—",
+                    ),
+                ),
+            )
+
+            driver_match = item.get(
+                "driver_match",
+                item.get(
+                    "driver_matches",
+                    item.get(
+                        "driver_identification_match",
+                        None,
+                    ),
+                ),
+            )
+
+            safety = item.get(
+                "safety",
+                item.get(
+                    "safe",
+                    item.get(
+                        "decision_acceptable",
+                        None,
+                    ),
+                ),
+            )
+
+            score = item.get(
+                "overall_score",
+                item.get(
+                    "score",
+                    None,
+                ),
+            )
+
+            # ------------------------------------------------
+            # Normalize booleans represented as strings.
+            # ------------------------------------------------
+
+            if isinstance(
+                driver_match,
+                str,
+            ):
+
+                driver_match = (
+                    driver_match.strip().lower()
+                    in {
+                        "true",
+                        "yes",
+                        "1",
+                        "pass",
+                    }
+                )
+
+            if isinstance(
+                safety,
+                str,
+            ):
+
+                safety = (
+                    safety.strip().lower()
+                    in {
+                        "true",
+                        "yes",
+                        "1",
+                        "pass",
+                    }
+                )
+
+            try:
+
+                score_value = (
+                    float(score)
+                    if score is not None
+                    else None
+                )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                score_value = None
+
+            normalized_results.append(
+                {
+                    "scenario_id":
+                        scenario_id,
+
+                    "ground_truth_driver":
+                        ground_truth,
+
+                    "top_engine_driver":
+                        top_driver,
+
+                    "status":
+                        status,
+
+                    "action_decision":
+                        decision,
+
+                    "driver_match":
+                        driver_match,
+
+                    "safety":
+                        safety,
+
+                    "overall_score":
+                        score_value,
+                }
+            )
+
+        # ----------------------------------------------------
+        # Use supplied summary when available, otherwise
+        # calculate it from the normalized scenario records.
+        # ----------------------------------------------------
+
+        summary = (
+            dict(
+                provided_summary
+            )
+            if isinstance(
+                provided_summary,
+                dict,
+            )
+            else {}
+        )
+
+        if not summary:
+
+            evaluated = len(
+                normalized_results
+            )
+
+            driver_matches = sum(
+                1
+                for item in normalized_results
+                if item["driver_match"] is True
+            )
+
+            safety_passed = sum(
+                1
+                for item in normalized_results
+                if item["safety"] is True
+            )
+
+            score_values = [
+                item["overall_score"]
+                for item in normalized_results
+                if item["overall_score"] is not None
+            ]
+
+            average_score = (
+                sum(score_values)
+                / len(score_values)
+                if score_values
+                else 0.0
+            )
+
+            summary = {
+
+                "scenarios_evaluated":
+                    evaluated,
+
+                "driver_matches":
+                    driver_matches,
+
+                "safety_checks_passed":
+                    safety_passed,
+
+                "average_score":
+                    average_score,
+            }
+
+        else:
+
+            # Support either count or ratio fields.
+            if (
+                "scenarios_evaluated"
+                not in summary
+            ):
+
+                summary[
+                    "scenarios_evaluated"
+                ] = len(
+                    normalized_results
+                )
+
+            if (
+                "driver_matches"
+                not in summary
+            ):
+
+                summary[
+                    "driver_matches"
+                ] = sum(
+                    1
+                    for item in normalized_results
+                    if item["driver_match"] is True
+                )
+
+            if (
+                "safety_checks_passed"
+                not in summary
+            ):
+
+                summary[
+                    "safety_checks_passed"
+                ] = sum(
+                    1
+                    for item in normalized_results
+                    if item["safety"] is True
+                )
+
+            if (
+                "average_score"
+                not in summary
+            ):
+
+                scores = [
+                    item["overall_score"]
+                    for item in normalized_results
+                    if item["overall_score"] is not None
+                ]
+
+                summary[
+                    "average_score"
+                ] = (
+                    sum(scores) / len(scores)
+                    if scores
+                    else 0.0
+                )
+
+        # ----------------------------------------------------
+        # Summary metrics
+        # ----------------------------------------------------
+
+        evaluated_value = summary.get(
+            "scenarios_evaluated",
+            len(normalized_results),
+        )
+
+        driver_matches_value = summary.get(
+            "driver_matches",
+            0,
+        )
+
+        safety_value = summary.get(
+            "safety_checks_passed",
+            0,
+        )
+
+        average_score_value = summary.get(
+            "average_score",
+            0,
+        )
+
+        # Handle APIs that provide ratios rather than counts.
+        if isinstance(
+            driver_matches_value,
+            float,
+        ) and 0 <= driver_matches_value <= 1:
+
+            driver_matches_display = (
+                f"{driver_matches_value * 100:.0f}%"
+            )
+
+        else:
+
+            driver_matches_display = (
+                str(
+                    driver_matches_value
+                )
+            )
+
+        if isinstance(
+            safety_value,
+            float,
+        ) and 0 <= safety_value <= 1:
+
+            safety_display = (
+                f"{safety_value * 100:.0f}%"
+            )
+
+        else:
+
+            safety_display = (
+                str(
+                    safety_value
+                )
+            )
+
+        c1, c2, c3, c4 = st.columns(
+            4
+        )
+
+        with c1:
+
+            st.metric(
+                "Scenarios",
+                evaluated_value,
+            )
+
+        with c2:
+
+            st.metric(
+                "Driver matches",
+                driver_matches_display,
+            )
+
+        with c3:
+
+            st.metric(
+                "Safety passed",
+                safety_display,
+            )
+
+        with c4:
+
+            try:
+
+                score_display = (
+                    f"{float(average_score_value):.3f}"
+                )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                score_display = "—"
+
+            st.metric(
+                "Average score",
+                score_display,
+            )
+
+        # ----------------------------------------------------
+        # Scenario table
+        # ----------------------------------------------------
+
+        if normalized_results:
+
+            st.dataframe(
+                normalized_results,
+                width="stretch",
+                hide_index=True,
+            )
+
+            try:
+
+                score_for_status = float(
+                    average_score_value
+                )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                score_for_status = 0.0
+
+            if score_for_status >= 0.90:
+
+                st.success(
+                    "Controlled scenario evaluation is passing."
+                )
+
+            elif score_for_status > 0:
+
+                st.warning(
+                    "Controlled scenario evaluation requires review."
+                )
+
+        else:
+
+            st.info(
+                "No controlled scenario evaluation records "
+                "are currently available."
+            )
+
+    else:
+
+        st.warning(
+            "Controlled scenario validation data could not "
+            "be loaded from the backend."
+        )
+
+    # ========================================================
+    # SPARSE HISTORY
+    # ========================================================
+
+    st.subheader("Sparse-History Safety")
+
+    sparse = api_get(
+        "/api/validation/sparse-history"
+    )
+
+    if sparse:
+
+        # ----------------------------------------------------
+        # Actual sparse scenario structure:
+        #
+        # sparse["history_assessment"]
+        # sparse["engine_decision"]
+        # ----------------------------------------------------
+
+        history_assessment = sparse.get(
+            "history_assessment",
+            {},
+        )
+
+        engine_decision = sparse.get(
+            "engine_decision",
+            {},
+        )
+
+        history_points = history_assessment.get(
+            "history_points",
+            0,
+        )
+
+        required_history = (
+            sparse.get(
+                "governance_expectation",
+                {},
+            ).get(
+                "minimum_history_points",
+                0,
+            )
+        )
+
+        relative_change = history_assessment.get(
+            "relative_change_pct"
+        )
+
+        decision = engine_decision.get(
+            "decision",
+            "—",
+        )
+
+        reason = engine_decision.get(
+            "reason",
+            "Sparse-history scenario information unavailable.",
+        )
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        with c1:
+
+            st.metric(
+                "History points",
+                history_points,
+            )
+
+        with c2:
+
+            st.metric(
+                "Required history",
+                required_history,
+            )
+
+        with c3:
+
+            st.metric(
+                "Relative change",
+                (
+                    f"{float(relative_change):+.1f}%"
+                    if relative_change is not None
+                    else "—"
+                ),
+            )
+
+        with c4:
+
+            st.metric(
+                "Decision",
+                str(decision),
+            )
+
+        if decision == "ABSTAIN":
+
+            st.success(
+                "Sparse-history safety check passed: "
+                "the engine abstains rather than making "
+                "a potentially unreliable claim."
+            )
+
+        else:
+
+            st.warning(
+                "Review the sparse-history behavior."
+            )
+
+        st.info(
+            reason
+        )
+
+    else:
+
+        st.warning(
+            "Sparse-history validation data are unavailable."
+        )
+
+    # ========================================================
+    # CAUSAL VALIDATION
+    # ========================================================
+
+    st.subheader(
+        "Causal Validation"
+    )
+
+    causal = api_get(
+        "/api/validation/causal"
+    )
+
+    if causal:
+
+        production = causal.get(
+            "production_status",
+            {},
+        )
+
+        result = causal.get(
+            "result",
+            {},
+        )
+
+        diagnostics = causal.get(
+            "diagnostics",
+            {},
+        )
+
+        # ----------------------------------------------------
+        # Support the actual causal artifact naming as well as
+        # common aliases.
+        # ----------------------------------------------------
+
+        effect_value = (
+            result.get(
+                "causal_effect"
+            )
+            if isinstance(
+                result,
+                dict,
+            )
+            else None
+        )
+
+        if effect_value is None:
+
+            effect_value = (
+                result.get(
+                    "causal_ate"
+                )
+                if isinstance(
+                    result,
+                    dict,
+                )
+                else None
+            )
+
+        if effect_value is None:
+
+            effect_value = (
+                result.get(
+                    "effect_estimate"
+                )
+                if isinstance(
+                    result,
+                    dict,
+                )
+                else None
+            )
+
+        confidence_value = (
+            production.get(
+                "confidence"
+            )
+            if isinstance(
+                production,
+                dict,
+            )
+            else None
+        )
+
+        if confidence_value is None:
+
+            confidence_value = (
+                result.get(
+                    "confidence"
+                )
+                if isinstance(
+                    result,
+                    dict,
+                )
+                else None
+            )
+
+        production_status = (
+            production.get(
+                "production_status",
+                "—",
+            )
+            if isinstance(
+                production,
+                dict,
+            )
+            else "—"
+        )
+
+        c1, c2, c3 = st.columns(
+            3
+        )
+
+        with c1:
+
+            try:
+
+                effect_display = (
+                    f"{float(effect_value):+.3f}"
+                )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                effect_display = "—"
+
+            st.metric(
+                "Causal effect",
+                effect_display,
+            )
+
+        with c2:
+
+            try:
+
+                confidence_display = (
+                    f"{float(confidence_value):.2f}"
+                )
+
+            except (
+                TypeError,
+                ValueError,
+            ):
+
+                confidence_display = "—"
+
+            st.metric(
+                "Confidence",
+                confidence_display,
+            )
+
+        with c3:
+
+            st.metric(
+                "Status",
+                production_status,
+            )
+
+        assessment = (
+            diagnostics.get(
+                "assessment",
+                {},
+            )
+            if isinstance(
+                diagnostics,
+                dict,
+            )
+            else {}
+        )
+
+        diagnostic_status = (
+            assessment.get(
+                "diagnostic_status",
+                diagnostics.get(
+                    "diagnostic_status",
+                    "—",
+                ),
+            )
+            if isinstance(
+                assessment,
+                dict,
+            )
+            else "—"
+        )
+
+        st.write(
+            "Diagnostic status: "
+            f"**{diagnostic_status}**"
+        )
+
+        if (
+            production_status
+            == "CAUSAL_EVIDENCE_ACCEPTED"
+        ):
+
+            st.success(
+                "Causal evidence passed the implemented "
+                "diagnostic checks."
+            )
+
+        else:
+
+            st.warning(
+                "Causal evidence is not fully production-ready."
+            )
+
+    # ========================================================
+    # FEEDBACK CALIBRATION
+    # ========================================================
+
+    st.subheader(
+        "Human-in-the-Loop Calibration"
+    )
+
+    calibration = api_get(
+        "/api/validation/feedback"
+    )
+
+    if calibration:
+
+        c1, c2, c3, c4 = st.columns(
+            4
+        )
+
+        with c1:
+
+            st.metric(
+                "Feedback",
+                calibration.get(
+                    "feedback_count",
+                    0,
+                ),
+            )
+
+        with c2:
+
+            st.metric(
+                "Correct",
+                calibration.get(
+                    "correct",
+                    0,
+                ),
+            )
+
+        with c3:
+
+            st.metric(
+                "Incorrect",
+                calibration.get(
+                    "incorrect",
+                    0,
+                ),
+            )
+
+        with c4:
+
+            st.metric(
+                "Missing context",
+                calibration.get(
+                    "missing_context",
+                    0,
+                ),
+            )
+
+        calibration_status = calibration.get(
+            "status",
+            "UNKNOWN",
+        )
+
+        if (
+            calibration_status
+            == "CALIBRATION_AVAILABLE"
+        ):
+
+            st.success(
+                "Enough feedback is available for "
+                "calibration analysis."
+            )
+
+        else:
+
+            st.info(
+                "The system is still collecting feedback. "
+                "Production confidence is not automatically "
+                "overridden from a small sample."
+            )
 
 # ============================================================
 # FOOTER
