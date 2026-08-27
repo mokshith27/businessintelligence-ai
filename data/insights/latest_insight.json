@@ -4,7 +4,9 @@
     "id": "marketplace_gmv",
     "name": "Marketplace GMV",
     "grain": "order_item",
-    "primary_date": "order_purchase_timestamp"
+    "primary_date": "order_purchase_timestamp",
+    "currency": "BRL",
+    "currency_symbol": "R$"
   },
   "event": {
     "event_id": 37,

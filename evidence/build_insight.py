@@ -569,6 +569,12 @@ def build_insight(con):
 
             "primary_date":
                 "order_purchase_timestamp",
+
+            "currency":
+                "BRL",
+
+            "currency_symbol":
+                "R$",
         },
 
         "event": {

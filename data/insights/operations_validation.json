@@ -1,0 +1,63 @@
+{
+  "persona": "operations",
+  "passed": true,
+  "checks": {
+    "numbers": {
+      "passed": true,
+      "checked_claims": [
+        "204,230.43",
+        "439,250.34",
+        "235,019.91",
+        "1,367",
+        "3,424",
+        "21.11",
+        "149.4",
+        "128.29",
+        "285,600.25",
+        "50,580.34",
+        "79,092.21",
+        "33.65 %",
+        "51,548.07",
+        "21.93 %",
+        "32,742.20",
+        "13.93 %",
+        "0.418"
+      ],
+      "unsupported_claims": []
+    },
+    "statuses": {
+      "passed": true,
+      "mentioned_statuses": [
+        "ABSTAIN",
+        "CONTRADICTED",
+        "INVESTIGATE",
+        "WEAK"
+      ],
+      "violations": []
+    },
+    "uncertainty": {
+      "passed": true,
+      "reason": null,
+      "matched_terms": [
+        "insufficient",
+        "investigate",
+        "evidence",
+        "limited"
+      ]
+    },
+    "currency": {
+      "passed": true,
+      "currency": "BRL",
+      "currency_symbol": "R$",
+      "violations": []
+    },
+    "causal_language": {
+      "passed": true,
+      "forbidden_phrases": []
+    },
+    "driver_claims": {
+      "passed": true,
+      "violations": []
+    }
+  }
+}

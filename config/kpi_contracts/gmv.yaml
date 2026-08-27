@@ -56,3 +56,6 @@ kpi:
     - operations
 
   sensitivity: internal
+
+  currency: BRL
+  currency_symbol: "R$"

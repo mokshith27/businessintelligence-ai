@@ -1,0 +1,21 @@
+{
+  "insight_id": "GMV_EVT_037",
+  "persona": "executive",
+  "story": "**HEADLINE:**  \nMarketplace GMV jumped from R$204,230.43 to R$439,250.34 in the week of 23‑29 Nov 2017, a rise of R$235,019.91. The increase was driven primarily by a surge in order volume despite a lower average order value.\n\n**WHAT CHANGED:**  \nGMV grew by R$235,019.91, while the number of orders rose by 2,057 (from 1,367 to 3,424). Average order value fell by R$21.11, from R$149.40 to R$128.29. The net effect of higher volume (+R$285,600.25) outweighed the negative AOV impact (‑R$50,580.34).\n\n**MAIN DRIVER:**  \nThe volume effect contributed the bulk of the GMV uplift, adding R$285,600.25, whereas the AOV effect detracted R$50,580.34. Thus, order count was the dominant factor.\n\n**WHERE:**  \nThe state of São Paulo (SP) showed the largest observed segment contribution, adding R$79,092.21 (33.65% of the change). The evidence for SP is classified as **WEAK** (confidence 0.418).\n\n**WHAT WE KNOW:**  \nEvidence for SP’s contribution is weak, indicating limited confidence in its role. Other drivers (MG, RJ, categories) have either abstain or contradicted evidence, so no firm root‑cause can be asserted.\n\n**NEXT STEP:**  \nProceed with the recommended **investigate** action for the São Paulo segment to gather more information and validate its impact on the GMV surge.",
+  "telemetry": {
+    "model": "openai/gpt-oss-120b",
+    "model_purpose": "Evidence-grounded narrative synthesis only",
+    "latency_ms": 1984.23,
+    "prompt_tokens": 1279,
+    "completion_tokens": 443,
+    "reasoning_tokens": 0,
+    "total_tokens": 1722,
+    "model_calls": 1,
+    "reasoning_effort": "low",
+    "reasoning_included": false,
+    "temperature": 0.1,
+    "max_completion_tokens": 850,
+    "estimated_cost_usd": 0.00045765,
+    "cost_is_estimate": true
+  }
+}

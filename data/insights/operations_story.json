@@ -1,0 +1,21 @@
+{
+  "insight_id": "GMV_EVT_037",
+  "persona": "operations",
+  "story": "**KPI MOVEMENT:**  \nMarketplace GMV rose from R$204,230.43 to R$439,250.34, a positive change of R$235,019.91. Orders increased by 2,057 (from 1,367 to 3,424), while average order value fell 21.11 BRL (from 149.4 BRL to 128.29 BRL).\n\n**ANALYTICAL DECOMPOSITION:**  \nThe GMV uplift is driven primarily by higher order volume (+R$285,600.25) that outweighed a decline in AOV (‑R$50,580.34). Residual effect is negligible.\n\n**TOP INVESTIGATION AREAS:**  \n1. **State SP** – contributed R$79,092.21 (33.65 %). Evidence status: **WEAK**; decision: **INVESTIGATE**.  \n2. **State MG** – contributed R$51,548.07 (21.93 %). Evidence status: **ABSTAIN**; decision: **ABSTAIN** (collect more evidence).  \n3. **Category bed_bath_table** – contributed R$32,742.20 (13.93 %). Evidence status: **ABSTAIN**; decision: **ABSTAIN**.\n\n**EVIDENCE:**  \n- SP: WEAK – observed contribution but limited confidence (0.418).  \n- MG: ABSTAIN – insufficient evidence to draw conclusions.  \n- bed_bath_table: ABSTAIN – insufficient evidence.  \n- RJ (contradicted) and other categories are not recommended for action.\n\n**ACTIONS:**  \n- Proceed with a focused investigation on the SP market to understand the observed uplift.  \n- For MG and the bed_bath_table category, hold off on concrete actions and gather additional data before deciding.\n\n**DATA QUALITY:**  \nCommerce data has normal coverage, and review text is available, but business context for this 2017 event is missing. Consequently, root‑cause interpretation remains conservative and any conclusions should be treated as tentative.",
+  "telemetry": {
+    "model": "openai/gpt-oss-120b",
+    "model_purpose": "Evidence-grounded narrative synthesis only",
+    "latency_ms": 2521.98,
+    "prompt_tokens": 1365,
+    "completion_tokens": 621,
+    "reasoning_tokens": 0,
+    "total_tokens": 1986,
+    "model_calls": 1,
+    "reasoning_effort": "low",
+    "reasoning_included": false,
+    "temperature": 0.1,
+    "max_completion_tokens": 850,
+    "estimated_cost_usd": 0.00057735,
+    "cost_is_estimate": true
+  }
+}

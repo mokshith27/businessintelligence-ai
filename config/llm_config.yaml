@@ -1,0 +1,13 @@
+provider: groq
+
+model: openai/gpt-oss-120b
+
+pricing:
+  input_usd_per_million_tokens: 0.15
+  output_usd_per_million_tokens: 0.60
+
+settings:
+  temperature: 0.1
+  reasoning_effort: low
+  include_reasoning: false
+  max_completion_tokens: 700
