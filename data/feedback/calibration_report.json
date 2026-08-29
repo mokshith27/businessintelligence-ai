@@ -1,10 +1,10 @@
 {
-  "status": "COLLECTING_FEEDBACK",
-  "feedback_count": 3,
-  "correct": 2,
+  "status": "CALIBRATION_AVAILABLE",
+  "feedback_count": 9,
+  "correct": 7,
   "incorrect": 0,
-  "missing_context": 1,
-  "definite_feedback": 2,
+  "missing_context": 2,
+  "definite_feedback": 7,
   "empirical_accuracy": 1.0,
   "bins": [
     {
@@ -16,7 +16,7 @@
     },
     {
       "confidence_range": "0.4-0.6",
-      "count": 1,
+      "count": 6,
       "mean_predicted_confidence": 0.418,
       "observed_accuracy": 1.0,
       "calibration_gap": 0.582
@@ -34,7 +34,7 @@
     {
       "driver_type": "customer_state",
       "driver": "SP",
-      "feedback_count": 1,
+      "feedback_count": 6,
       "mean_confidence": 0.418,
       "observed_accuracy": 1.0,
       "calibration_gap": 0.582

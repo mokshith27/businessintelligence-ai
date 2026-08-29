@@ -211,15 +211,15 @@ businessintelligence-ai/
 │   └── inspect_gmv_tail.py
 │
 ├── anomaly/
-│   ├── seasonal_baseline.py
-│   └── changepoints.py
+│   ├── seasonal_baseline.py    # documented extension point
+│   └── changepoints.py         # optional extension
 │
 ├── drivers/
-│   ├── decomposition.py
-│   ├── segment_contribution.py
+│   ├── decomposition.py        # production
+│   ├── segment_contribution.py  # production
 │   ├── segment_tables.py
 │   ├── check_decomposition.py
-│   └── shap_attribution.py
+│   └── shap_attribution.py      # optional extension
 │
 ├── nlp/
 │   ├── aspect_tagging.py
@@ -264,7 +264,7 @@ businessintelligence-ai/
 │   └── capture_and_calibrate.py
 │
 ├── telemetry/
-│   └── track.py
+│   └── track.py     # extension point; LLM telemetry is in story_generator.py
 │
 ├── api/
 │   └── main.py

@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import math
+import re
 from datetime import date, datetime
 from typing import Optional
 
@@ -18,6 +19,15 @@ from feedback.capture_and_calibrate import (
     capture_feedback,
     load_feedback,
     build_calibration_report,
+)
+
+
+from drivers.event_investigation import (
+    run_event_investigation,
+)
+
+from llm.story_generator import (
+    generate_event_narratives,
 )
 
 
@@ -128,6 +138,7 @@ CALIBRATION_PATH = (
 # ============================================================
 # DATABASE HELPERS
 # ============================================================
+
 
 def connect_database():
     """
@@ -279,6 +290,7 @@ def security_test():
 # ============================================================
 # HELPERS
 # ============================================================
+
 
 def make_json_safe(value):
     """
@@ -536,6 +548,7 @@ def get_calibration():
 
         con.close()
 
+
 @app.get("/api/validation/scenarios")
 def get_scenario_validation():
 
@@ -558,6 +571,7 @@ def get_scenario_validation():
         }
     )
 
+
 @app.get("/api/validation/sparse-history")
 def get_sparse_history():
 
@@ -573,6 +587,7 @@ def get_sparse_history():
         )
 
     return result
+
 
 @app.get("/api/validation/causal")
 def get_causal_validation():
@@ -596,6 +611,7 @@ def get_causal_validation():
         }
     )
 
+
 @app.get("/api/validation/feedback")
 def get_feedback_validation():
 
@@ -611,7 +627,6 @@ def get_feedback_validation():
         )
 
     return result
-
 
 
 def get_connection():
@@ -657,6 +672,7 @@ def read_json(path):
             detail=f"Invalid JSON: {path.name}",
         )
 
+
 def optional_json_file(path):
     """
     Return JSON contents when available.
@@ -682,7 +698,6 @@ def optional_json_file(path):
         )
 
         return None
-
 
 
 def sanitize_value(value):
@@ -928,6 +943,297 @@ def events(
 
 
 # ============================================================
+# EVENT INVESTIGATION
+# ============================================================
+
+# ============================================================
+# EVENT INVESTIGATION
+# ============================================================
+
+@app.get("/api/insights/event/{event_id}")
+def event_investigation(
+    event_id: int,
+):
+    """
+    Run the selected event through the same deterministic pipeline
+    used by the narrative endpoint.
+
+    Every event is handled identically and calculated on demand.
+    """
+
+    try:
+
+        result = run_event_investigation(
+            int(event_id)
+        )
+
+        return make_json_safe(
+            result
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] /api/insights/event/{event_id}: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+
+# ============================================================
+# ON-DEMAND EVENT NARRATIVE
+# ============================================================
+
+@app.post("/api/insights/event/{event_id}/narrative")
+def event_narrative(
+    event_id: int,
+):
+    """
+    Generate and validate an event-specific narrative.
+
+    The deterministic investigation is built ONCE and used for both
+    LLM attempts, so the model and validator always see the same facts.
+
+    No event-specific hardcoding exists.
+    """
+
+    try:
+
+        investigation = run_event_investigation(
+            int(event_id)
+        )
+
+        validation_feedback = None
+        last_result = None
+
+        for attempt in range(2):
+
+            narratives = generate_event_narratives(
+                investigation,
+                validation_feedback,
+            )
+
+            executive_story = narratives.get(
+                "executive",
+                {},
+            )
+
+            operations_story = narratives.get(
+                "operations",
+                {},
+            )
+
+            executive_validation = validate_dynamic_story(
+                executive_story.get(
+                    "story",
+                    "",
+                ),
+                investigation,
+                "executive",
+            )
+
+            operations_validation = validate_dynamic_story(
+                operations_story.get(
+                    "story",
+                    "",
+                ),
+                investigation,
+                "operations",
+            )
+
+            overall_passed = (
+                executive_validation.get(
+                    "available",
+                    False,
+                )
+                and
+                operations_validation.get(
+                    "available",
+                    False,
+                )
+                and
+                executive_validation.get(
+                    "passed",
+                    False,
+                )
+                and
+                operations_validation.get(
+                    "passed",
+                    False,
+                )
+            )
+
+            last_result = {
+                "event_id":
+                    int(event_id),
+
+                "event":
+                    investigation.get(
+                        "event",
+                        {},
+                    ),
+
+                "executive": {
+                    "story":
+                        executive_story.get(
+                            "story",
+                            "",
+                        ),
+
+                    "telemetry":
+                        executive_story.get(
+                            "telemetry",
+                            {},
+                        ),
+
+                    "validation":
+                        executive_validation,
+                },
+
+                "operations": {
+                    "story":
+                        operations_story.get(
+                            "story",
+                            "",
+                        ),
+
+                    "telemetry":
+                        operations_story.get(
+                            "telemetry",
+                            {},
+                        ),
+
+                    "validation":
+                        operations_validation,
+                },
+
+                "validation": {
+                    "passed":
+                        overall_passed,
+
+                    "executive_passed":
+                        executive_validation.get(
+                            "passed",
+                            False,
+                        ),
+
+                    "operations_passed":
+                        operations_validation.get(
+                            "passed",
+                            False,
+                        ),
+
+                    "validator_available":
+                        (
+                            executive_validation.get(
+                                "available",
+                                False,
+                            )
+                            and
+                            operations_validation.get(
+                                "available",
+                                False,
+                            )
+                        ),
+
+                    "attempts":
+                        attempt + 1,
+                },
+
+                "source":
+                    "selected_event_dynamic_investigation",
+
+                "persisted":
+                    False,
+            }
+
+            if overall_passed:
+
+                return make_json_safe(
+                    last_result
+                )
+
+            validation_feedback = {
+                "executive":
+                    executive_validation,
+
+                "operations":
+                    operations_validation,
+            }
+
+        return make_json_safe(
+            last_result
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+
+        error_text = str(exc)
+
+        # Groq/OpenAI-compatible providers use 429 for rate limits.
+        # Surface this honestly instead of hiding it as a backend 500.
+        if (
+            "429" in error_text
+            or "rate_limit_exceeded" in error_text
+            or "tokens per day" in error_text
+            or "tokens per minute" in error_text
+        ):
+
+            retry_match = re.search(
+                r"try again in ([^.]*)",
+                error_text,
+                flags=re.IGNORECASE,
+            )
+
+            retry_hint = (
+                retry_match.group(1)
+                if retry_match
+                else "a short while"
+            )
+
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    "LLM provider rate limit reached. "
+                    f"Retry after approximately {retry_hint}. "
+                    "No deterministic investigation data was lost."
+                ),
+            )
+
+        print(
+            f"[ERROR] /api/insights/event/"
+            f"{event_id}/narrative: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+
+# ============================================================
 # DRIVERS
 # ============================================================
 
@@ -945,33 +1251,23 @@ def drivers(
             result = con.execute(
                 """
                 SELECT
-
                     event_id,
-
                     driver_type,
-
                     driver,
-
                     ROUND(
                         gmv_change,
                         2
                     ) AS gmv_change,
-
                     ROUND(
                         contribution_share,
                         4
                     ) AS contribution_share,
-
                     ROUND(
                         confidence,
                         3
                     ) AS confidence,
-
-                    final_status,
-
-                    decision
-
-                FROM fact_driver_confidence
+                    final_status
+                FROM fact_driver_confidence 
 
                 ORDER BY
                     confidence DESC,
@@ -988,33 +1284,23 @@ def drivers(
             result = con.execute(
                 """
                 SELECT
-
                     event_id,
-
                     driver_type,
-
                     driver,
-
                     ROUND(
                         gmv_change,
                         2
                     ) AS gmv_change,
-
                     ROUND(
                         contribution_share,
                         4
                     ) AS contribution_share,
-
                     ROUND(
                         confidence,
                         3
                     ) AS confidence,
-
-                    final_status,
-
-                    decision
-
-                FROM fact_driver_confidence
+                    final_status
+                FROM fact_driver_confidence 
 
                 WHERE
                     event_id = ?
@@ -1146,6 +1432,558 @@ def actions(
         con.close()
 
 
+
+def validate_dynamic_story(
+    story: str,
+    investigation: dict,
+    persona: str,
+) -> dict:
+    """
+    Run the project's actual narrative validator.
+
+    The validator is located at:
+        llm/narrative_validator.py
+
+    and exposes:
+        validate_story(story, insight, persona)
+    """
+
+    try:
+
+        from llm.narrative_validator import (
+            validate_story,
+        )
+
+    except Exception as exc:
+
+        return {
+            "available":
+                False,
+
+            "passed":
+                False,
+
+            "persona":
+                persona,
+
+            "error":
+                (
+                    "Could not import "
+                    "llm.narrative_validator.validate_story: "
+                    f"{exc}"
+                ),
+        }
+
+    try:
+
+        result = validate_story(
+            story,
+            investigation,
+            persona,
+        )
+
+        return {
+            "available":
+                True,
+
+            **result,
+        }
+
+    except Exception as exc:
+
+        return {
+            "available":
+                True,
+
+            "passed":
+                False,
+
+            "persona":
+                persona,
+
+            "error":
+                str(exc),
+        }
+
+
+# ============================================================
+# CUSTOMER EXPERIENCE KPIs
+# ============================================================
+
+@app.get("/api/customer-experience-kpis")
+def customer_experience_kpis(
+    event_id: int | None = None,
+):
+    """
+    Return event-period and comparison-period values for:
+
+        1. Late Delivery Rate
+        2. Review Score
+
+    Event dates are resolved from fact_gmv_events.
+    Late delivery rate is:
+
+        late delivered orders / delivered orders
+
+    where delivery_delay_days > 0 identifies a late delivery.
+
+    Review score is the average review_score by
+    review_creation_date for the corresponding periods.
+    """
+
+    con = get_connection()
+
+    try:
+
+        # ----------------------------------------------------
+        # Resolve the event window.
+        # fact_gmv_events stores the event identifier as event_group.
+        # ----------------------------------------------------
+
+        if event_id is None:
+
+            event_row = con.execute(
+                """
+                SELECT
+                    event_group,
+                    event_start_date,
+                    event_end_date
+                FROM fact_gmv_events
+                ORDER BY
+                    event_priority_score DESC,
+                    event_start_date DESC
+                LIMIT 1;
+                """
+            ).fetchone()
+
+        else:
+
+            event_row = con.execute(
+                """
+                SELECT
+                    event_group,
+                    event_start_date,
+                    event_end_date
+                FROM fact_gmv_events
+                WHERE
+                    event_group = ?
+                LIMIT 1;
+                """,
+                [event_id],
+            ).fetchone()
+
+        if event_row is None:
+
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"Event {event_id} not found."
+                    if event_id is not None
+                    else "No KPI event found."
+                ),
+            )
+
+        resolved_event_id = event_row[0]
+        event_start = event_row[1]
+        event_end = event_row[2]
+
+        from datetime import timedelta
+
+        event_end_exclusive = (
+            event_end + timedelta(days=1)
+        )
+
+        # ----------------------------------------------------
+        # Event end date is inclusive in fact_gmv_events.
+        # Therefore duration is start -> event_end + 1.
+        # ----------------------------------------------------
+
+        duration_days = con.execute(
+            """
+            SELECT
+                date_diff(
+                    'day',
+                    CAST(? AS DATE),
+                    CAST(? AS DATE)
+                ) + 1;
+            """,
+            [event_start, event_end],
+        ).fetchone()[0]
+
+        if duration_days is None or duration_days <= 0:
+            duration_days = 1
+
+        comparison_start = con.execute(
+            """
+            SELECT
+                CAST(? AS DATE) - (? * INTERVAL '1 day');
+            """,
+            [event_start, duration_days],
+        ).fetchone()[0]
+
+        comparison_end = event_start
+
+        # ----------------------------------------------------
+        # Late-delivery rate
+        # ----------------------------------------------------
+
+        late_delivery = con.execute(
+            """
+            SELECT
+
+                SUM(
+                    CASE
+                        WHEN
+                            order_delivered_customer_date IS NOT NULL
+                            AND delivery_delay_days > 0
+                        THEN 1
+                        ELSE 0
+                    END
+                )::DOUBLE
+                /
+                NULLIF(
+                    SUM(
+                        CASE
+                            WHEN
+                                order_delivered_customer_date IS NOT NULL
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS current_rate,
+
+                SUM(
+                    CASE
+                        WHEN
+                            order_delivered_customer_date IS NOT NULL
+                            AND delivery_delay_days > 0
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS current_late_orders,
+
+                SUM(
+                    CASE
+                        WHEN
+                            order_delivered_customer_date IS NOT NULL
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS current_delivered_orders
+
+            FROM fact_orders_enriched
+
+            WHERE
+                order_purchase_timestamp >= ?
+                AND order_purchase_timestamp < ?;
+            """,
+            [event_start, event_end_exclusive],
+        ).fetchone()
+
+        previous_late_delivery = con.execute(
+            """
+            SELECT
+
+                SUM(
+                    CASE
+                        WHEN
+                            order_delivered_customer_date IS NOT NULL
+                            AND delivery_delay_days > 0
+                        THEN 1
+                        ELSE 0
+                    END
+                )::DOUBLE
+                /
+                NULLIF(
+                    SUM(
+                        CASE
+                            WHEN
+                                order_delivered_customer_date IS NOT NULL
+                            THEN 1
+                            ELSE 0
+                        END
+                    ),
+                    0
+                ) AS previous_rate,
+
+                SUM(
+                    CASE
+                        WHEN
+                            order_delivered_customer_date IS NOT NULL
+                            AND delivery_delay_days > 0
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS previous_late_orders,
+
+                SUM(
+                    CASE
+                        WHEN
+                            order_delivered_customer_date IS NOT NULL
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS previous_delivered_orders
+
+            FROM fact_orders_enriched
+
+            WHERE
+                order_purchase_timestamp >= ?
+                AND order_purchase_timestamp < ?;
+            """,
+            [comparison_start, comparison_end],
+        ).fetchone()
+
+        current_delivery_rate = (
+            float(late_delivery[0])
+            if late_delivery[0] is not None
+            else None
+        )
+
+        previous_delivery_rate = (
+            float(previous_late_delivery[0])
+            if previous_late_delivery[0] is not None
+            else None
+        )
+
+        delivery_change = (
+            current_delivery_rate - previous_delivery_rate
+            if (
+                current_delivery_rate is not None
+                and previous_delivery_rate is not None
+            )
+            else None
+        )
+
+        delivery_change_pp = (
+            delivery_change * 100
+            if delivery_change is not None
+            else None
+        )
+
+        # ----------------------------------------------------
+        # Review score
+        #
+        # Use review_creation_date because review_score belongs
+        # to the review observation itself.
+        # ----------------------------------------------------
+
+        review_row = con.execute(
+            """
+            SELECT
+                AVG(review_score) AS current_score,
+                COUNT(*) AS current_reviews
+            FROM fact_reviews
+            WHERE
+                review_creation_date >= ?
+                AND review_creation_date < ?;
+            """,
+            [event_start, event_end],
+        ).fetchone()
+
+        previous_review_row = con.execute(
+            """
+            SELECT
+                AVG(review_score) AS previous_score,
+                COUNT(*) AS previous_reviews
+            FROM fact_reviews
+            WHERE
+                review_creation_date >= ?
+                AND review_creation_date < ?;
+            """,
+            [comparison_start, comparison_end],
+        ).fetchone()
+
+        current_review_score = (
+            float(review_row[0])
+            if review_row[0] is not None
+            else None
+        )
+
+        previous_review_score = (
+            float(previous_review_row[0])
+            if previous_review_row[0] is not None
+            else None
+        )
+
+        review_score_change = (
+            current_review_score - previous_review_score
+            if (
+                current_review_score is not None
+                and previous_review_score is not None
+            )
+            else None
+        )
+
+        return make_json_safe(
+            {
+                "event_id":
+                    int(resolved_event_id),
+
+                "event_period": {
+                    "start":
+                        event_start,
+
+                    "end":
+                        event_end,
+                },
+
+                "comparison_period": {
+                    "start":
+                        comparison_start,
+
+                    "end":
+                        comparison_end,
+                },
+
+                "late_delivery_rate": {
+                    "current":
+                        current_delivery_rate,
+
+                    "previous":
+                        previous_delivery_rate,
+
+                    "change":
+                        delivery_change,
+
+                    "change_pp":
+                        delivery_change_pp,
+
+                    "current_late_orders":
+                        late_delivery[1],
+
+                    "current_delivered_orders":
+                        late_delivery[2],
+
+                    "previous_late_orders":
+                        previous_late_delivery[1],
+
+                    "previous_delivered_orders":
+                        previous_late_delivery[2],
+                },
+
+                "review_score": {
+                    "current":
+                        current_review_score,
+
+                    "previous":
+                        previous_review_score,
+
+                    "change":
+                        review_score_change,
+
+                    "current_reviews":
+                        review_row[1],
+
+                    "previous_reviews":
+                        previous_review_row[1],
+                },
+            }
+        )
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] /api/customer-experience-kpis: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+    finally:
+
+        con.close()
+
+
+# ============================================================
+# REVIEW EVIDENCE
+# ============================================================
+
+@app.get("/api/review-evidence")
+def review_evidence(
+    event_id: int | None = None,
+):
+    """
+    Return review evidence from the same dynamic selected-event engine
+    used by the dashboard and LLM.
+    """
+
+    if event_id is None:
+
+        event_response = events(
+            limit=1
+        )
+
+        available_events = event_response.get(
+            "events",
+            [],
+        )
+
+        if not available_events:
+
+            return make_json_safe(
+                {
+                    "event_id":
+                        None,
+
+                    "aspect_count":
+                        0,
+
+                    "sentiment_record_count":
+                        0,
+
+                    "aspect_summary":
+                        [],
+
+                    "sentiment_by_aspect":
+                        [],
+                }
+            )
+
+        event_id = int(
+            available_events[0][
+                "event_group"
+            ]
+        )
+
+    try:
+
+        investigation = run_event_investigation(
+            int(event_id)
+        )
+
+        return make_json_safe(
+            investigation.get(
+                "review_evidence",
+                {},
+            )
+        )
+
+    except ValueError as exc:
+
+        raise HTTPException(
+            status_code=404,
+            detail=str(exc),
+        )
+
+    except Exception as exc:
+
+        print(
+            f"[ERROR] /api/review-evidence: {exc}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+
 # ============================================================
 # TELEMETRY
 # ============================================================
@@ -1196,7 +2034,7 @@ def telemetry():
                     "passed",
                     False
                 ),
-        },
+                },
     })
 
 

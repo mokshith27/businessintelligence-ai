@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import requests
 import streamlit as st
 import plotly.graph_objects as go
@@ -6,6 +8,8 @@ import plotly.graph_objects as go
 # ============================================================
 # CONFIG
 # ============================================================
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 API_BASE_URL = "http://127.0.0.1:8000"
 
@@ -26,20 +30,19 @@ st.set_page_config(
 # API HELPER
 # ============================================================
 
-def api_get(endpoint):
+def api_get(
+    endpoint,
+    timeout=30,
+):
     """
     Call FastAPI and return decoded JSON.
-
-    No Streamlit caching is used here because we are actively
-    regenerating insights, narratives and validation artifacts
-    during development.
     """
 
     try:
 
         response = requests.get(
             f"{API_BASE_URL}{endpoint}",
-            timeout=15,
+            timeout=timeout,
         )
 
         response.raise_for_status()
@@ -58,9 +61,13 @@ def api_get(endpoint):
 def api_post(
     endpoint,
     payload,
+    timeout=30,
 ):
     """
     POST JSON payload to FastAPI.
+
+    Narrative generation gets a much longer timeout at the call site
+    because LLM inference can take longer than normal API requests.
     """
 
     try:
@@ -68,7 +75,7 @@ def api_post(
         response = requests.post(
             f"{API_BASE_URL}{endpoint}",
             json=payload,
-            timeout=15,
+            timeout=timeout,
         )
 
         response.raise_for_status()
@@ -324,100 +331,203 @@ with st.sidebar:
 
 
 # ============================================================
-# LOAD ROLE-AWARE INSIGHT
+# LOAD EVENTS FOR EXPLORATION
 # ============================================================
-
-insight = api_get(
-    f"/api/insights/role?role={role_key}"
-)
-
-if insight is None:
-    st.stop()
-
-
-# ============================================================
-# LOAD SUPPORTING DATA
-# ============================================================
-
-# ------------------------------------------------------------
-# The story displayed depends on the role.
-# ------------------------------------------------------------
-
-if role == "Executive":
-
-    story_response = api_get(
-        "/api/insights/latest/executive"
-    )
-
-    story = (
-        story_response.get(
-            "story",
-            ""
-        )
-        if story_response
-        else ""
-    )
-
-elif role == "Operations":
-
-    story_response = api_get(
-        "/api/insights/latest/operations"
-    )
-
-    story = (
-        story_response.get(
-            "story",
-            ""
-        )
-        if story_response
-        else ""
-    )
-
-else:
-
-    # Analyst can inspect both narrative forms.
-    executive_response = api_get(
-        "/api/insights/latest/executive"
-    )
-
-    operations_response = api_get(
-        "/api/insights/latest/operations"
-    )
-
-    executive_story = (
-        executive_response.get(
-            "story",
-            ""
-        )
-        if executive_response
-        else ""
-    )
-
-    operations_story = (
-        operations_response.get(
-            "story",
-            ""
-        )
-        if operations_response
-        else ""
-    )
-
-# ------------------------------------------------------------
-# Supporting endpoints
-# ------------------------------------------------------------
-
-actions_response = api_get(
-    "/api/actions"
-)
-
-telemetry = api_get(
-    "/api/telemetry"
-)
 
 events_response = api_get(
     "/api/events?limit=25"
 )
 
+historical_events = (
+    events_response.get(
+        "events",
+        []
+    )
+    if events_response
+    else []
+)
+
+
+# ============================================================
+# EVENT PICKER
+# ============================================================
+
+with st.sidebar:
+
+    st.subheader(
+        "Investigate an Event"
+    )
+
+    if historical_events:
+
+        event_options = {}
+
+        for row in historical_events:
+
+            event_id = row.get(
+                "event_group"
+            )
+
+            start_date = row.get(
+                "event_start_date",
+                "—"
+            )
+
+            end_date = row.get(
+                "event_end_date",
+                "—"
+            )
+
+            priority = row.get(
+                "investigation_priority",
+                "—"
+            )
+
+            direction = row.get(
+                "direction",
+                "—"
+            )
+
+            label = (
+                f"Event {event_id} | "
+                f"{start_date} → {end_date} | "
+                f"{direction} | {priority}"
+            )
+
+            event_options[label] = int(
+                event_id
+            )
+
+        option_labels = list(
+            event_options.keys()
+        )
+
+        selected_label = st.selectbox(
+            "Event",
+            option_labels,
+            key="selected_event_label",
+        )
+
+        selected_event_id = event_options[
+            selected_label
+        ]
+
+    else:
+
+        selected_event_id = None
+
+        st.info(
+            "No KPI events are available."
+        )
+
+
+# ============================================================
+# LOAD SELECTED EVENT
+# ============================================================
+
+selected_event_id = (
+    selected_event_id
+    if selected_event_id is not None
+    else None
+)
+
+if selected_event_id is None:
+
+    st.info(
+        "Select a KPI event from the sidebar."
+    )
+
+    st.stop()
+
+# Every event, including the latest event, goes through the same
+# dynamic investigation endpoint.
+selected_insight = api_get(
+    f"/api/insights/event/{selected_event_id}",
+    timeout=60,
+)
+
+if selected_insight is None:
+    st.stop()
+
+insight = selected_insight
+
+# ============================================================
+# NARRATIVE STATE
+# ============================================================
+
+if "generated_narratives" not in st.session_state:
+    st.session_state.generated_narratives = {}
+
+if "narrative_diagnostics" not in st.session_state:
+    st.session_state.narrative_diagnostics = {}
+
+dynamic_narrative = (
+    st.session_state.generated_narratives.get(
+        int(selected_event_id)
+    )
+)
+
+generation_diagnostic = (
+    st.session_state.narrative_diagnostics.get(
+        int(selected_event_id)
+    )
+)
+
+story = ""
+executive_story = ""
+operations_story = ""
+
+if dynamic_narrative:
+
+    validation = dynamic_narrative.get(
+        "validation",
+        {},
+    )
+
+    if validation.get(
+        "passed",
+        False,
+    ):
+
+        executive_story = (
+            dynamic_narrative.get(
+                "executive",
+                {},
+            ).get(
+                "story",
+                "",
+            )
+        )
+
+        operations_story = (
+            dynamic_narrative.get(
+                "operations",
+                {},
+            ).get(
+                "story",
+                "",
+            )
+        )
+
+        if role == "Executive":
+            story = executive_story
+
+        elif role == "Operations":
+            story = operations_story
+
+# ------------------------------------------------------------
+# Supporting data already belongs to the selected event.
+# ------------------------------------------------------------
+
+actions_response = {
+    "actions":
+        insight.get(
+            "actions",
+            [],
+        )
+}
+
+telemetry = None
 
 # ============================================================
 # EXTRACT INSIGHT
@@ -445,18 +555,23 @@ drivers = insight.get(
 
 
 # ============================================================
-# SIDEBAR EVENT INFO
+# SIDEBAR SELECTED EVENT INFO
 # ============================================================
 
 with st.sidebar:
 
     st.subheader(
-        "Current Event"
+        "Selected Event"
     )
 
     st.write(
         f"**{event.get('start_date', '—')} "
         f"→ {event.get('end_date', '—')}**"
+    )
+
+    st.write(
+        "Event ID: "
+        f"**{event.get('event_id', '—')}**"
     )
 
     st.write(
@@ -469,10 +584,18 @@ with st.sidebar:
         f"**{event.get('direction', '—')}**"
     )
 
-    st.caption(
-        "Values are derived from the "
-        "governed analytical insight."
-    )
+    if dynamic_narrative:
+
+        st.success(
+            "Validated AI narrative is available for this event."
+        )
+
+    else:
+
+        st.info(
+            "This event is analyzed dynamically. "
+            "Generate a validated AI narrative when needed."
+        )
 
 
 # ============================================================
@@ -486,6 +609,14 @@ st.title(
 st.caption(
     "From KPI movement to evidence-backed action"
 )
+
+if selected_event_id is not None:
+
+    st.caption(
+        f"Investigating Event {selected_event_id}: "
+        f"{event.get('start_date', '—')} → "
+        f"{event.get('end_date', '—')}"
+    )
 
 
 # ============================================================
@@ -558,8 +689,99 @@ else:
     aov_change_pct = None
 
 
-col1, col2, col3, col4 = st.columns(
-    4
+# ------------------------------------------------------------
+# Customer-experience KPI support
+# ------------------------------------------------------------
+
+customer_experience = insight.get(
+    "customer_experience",
+    {},
+)
+
+late_delivery_rate = None
+late_delivery_rate_change_pp = None
+review_score = None
+review_score_change = None
+
+if customer_experience:
+
+    late_data = customer_experience.get(
+        "late_delivery_rate",
+        {},
+    )
+
+    review_data = customer_experience.get(
+        "review_score",
+        {},
+    )
+
+    late_delivery_rate = late_data.get(
+        "current"
+    )
+
+    late_delivery_rate_change_pp = late_data.get(
+        "change_pp"
+    )
+
+    review_score = review_data.get(
+        "current"
+    )
+
+    review_score_change = review_data.get(
+        "change"
+    )
+
+
+def format_rate(value):
+
+    if value is None:
+        return "—"
+
+    try:
+        return f"{float(value) * 100:.1f}%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def format_pp_change(value):
+
+    if value is None:
+        return None
+
+    try:
+        return f"{float(value):+.1f} pp"
+    except (TypeError, ValueError):
+        return None
+
+
+def format_review_score(value):
+
+    if value is None:
+        return "—"
+
+    try:
+        return f"{float(value):.2f} / 5"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def format_score_change(value):
+
+    if value is None:
+        return None
+
+    try:
+        return f"{float(value):+.2f}"
+    except (TypeError, ValueError):
+        return None
+
+
+# ------------------------------------------------------------
+# KPI hero — first row
+# ------------------------------------------------------------
+
+col1, col2, col3 = st.columns(
+    3
 )
 
 with col1:
@@ -599,6 +821,14 @@ with col3:
         ),
     )
 
+# ------------------------------------------------------------
+# KPI hero — second row
+# ------------------------------------------------------------
+
+col4, col5, col6 = st.columns(
+    3
+)
+
 with col4:
 
     st.metric(
@@ -608,6 +838,30 @@ with col4:
         ),
         format_pct(
             aov_change_pct
+        ),
+    )
+
+with col5:
+
+    st.metric(
+        "Late Delivery Rate",
+        format_rate(
+            late_delivery_rate
+        ),
+        format_pp_change(
+            late_delivery_rate_change_pp
+        ),
+    )
+
+with col6:
+
+    st.metric(
+        "Review Score",
+        format_review_score(
+            review_score
+        ),
+        format_score_change(
+            review_score_change
         ),
     )
 
@@ -638,18 +892,392 @@ elif priority == "MEDIUM":
 
 
 # ============================================================
+# CUSTOMER REVIEW EVIDENCE
+# ============================================================
+
+review_response = insight.get(
+    "review_evidence",
+    {},
+)
+
+# Some older event payloads may not contain the embedded review block.
+# Fall back to the event-specific API, which is still tied to the selected event.
+if not review_response.get(
+    "aspect_summary",
+    [],
+):
+
+    fallback_review = api_get(
+        f"/api/review-evidence?event_id={event.get('event_id')}",
+        timeout=30,
+    ) if event.get("event_id") is not None else None
+
+    if fallback_review:
+        review_response = fallback_review
+
+if review_response:
+
+    aspect_summary = review_response.get(
+        "aspect_summary",
+        [],
+    )
+
+    sentiment_rows = review_response.get(
+        "sentiment_by_aspect",
+        [],
+    )
+
+    if aspect_summary:
+
+        st.subheader(
+            "Customer Review Evidence"
+        )
+
+        st.caption(
+            "Review aspects and sentiment changes provide "
+            "unstructured evidence for the selected KPI event."
+        )
+
+        event_review_records = review_response.get(
+            "event_review_records"
+        )
+
+        comparison_review_records = review_response.get(
+            "comparison_review_records"
+        )
+
+        if (
+            event_review_records is not None
+            or comparison_review_records is not None
+        ):
+
+            rc1, rc2 = st.columns(2)
+
+            with rc1:
+
+                st.metric(
+                    "Event review records",
+                    (
+                        f"{int(event_review_records):,}"
+                        if event_review_records is not None
+                        else "—"
+                    ),
+                )
+
+            with rc2:
+
+                st.metric(
+                    "Comparison review records",
+                    (
+                        f"{int(comparison_review_records):,}"
+                        if comparison_review_records is not None
+                        else "—"
+                    ),
+                )
+
+        aspect_display = []
+
+        for row in aspect_summary[:8]:
+
+            event_mentions = (
+                row.get(
+                    "event_mentions",
+                    0
+                )
+                or 0
+            )
+
+            comparison_mentions = (
+                row.get(
+                    "comparison_mentions",
+                    0
+                )
+                or 0
+            )
+
+            mention_change = (
+                row.get(
+                    "mention_change",
+                    0
+                )
+                or 0
+            )
+
+            aspect_display.append(
+                {
+                    "Aspect":
+                        str(
+                            row.get(
+                                "aspect",
+                                "—"
+                            )
+                        ).replace(
+                            "_",
+                            " "
+                        ).title(),
+
+                    "Event mentions":
+                        int(
+                            event_mentions
+                        ),
+
+                    "Previous":
+                        int(
+                            comparison_mentions
+                        ),
+
+                    "Change":
+                        f"{int(mention_change):+d}",
+                }
+            )
+
+        st.dataframe(
+            aspect_display,
+            width="stretch",
+            hide_index=True,
+        )
+
+        if sentiment_rows:
+
+            chart_rows = []
+
+            for row in sentiment_rows:
+
+                aspect = str(
+                    row.get(
+                        "aspect",
+                        "—"
+                    )
+                ).replace(
+                    "_",
+                    " "
+                ).title()
+
+                sentiment = str(
+                    row.get(
+                        "sentiment",
+                        "neutral"
+                    )
+                ).title()
+
+                try:
+                    event_mentions = int(
+                        row.get(
+                            "event_mentions",
+                            0
+                        )
+                        or 0
+                    )
+                except (
+                    TypeError,
+                    ValueError,
+                ):
+                    event_mentions = 0
+
+                chart_rows.append(
+                    {
+                        "aspect":
+                            aspect,
+
+                        "sentiment":
+                            sentiment,
+
+                        "event_mentions":
+                            event_mentions,
+                    }
+                )
+
+            if chart_rows:
+
+                fig_review = go.Figure()
+
+                for sentiment_name in [
+                    "Positive",
+                    "Neutral",
+                    "Negative",
+                ]:
+
+                    rows_for_sentiment = [
+                        row
+                        for row in chart_rows
+                        if row["sentiment"] == sentiment_name
+                    ]
+
+                    if not rows_for_sentiment:
+                        continue
+
+                    rows_for_sentiment = sorted(
+                        rows_for_sentiment,
+                        key=lambda row: row["event_mentions"],
+                        reverse=True,
+                    )[:8]
+
+                    fig_review.add_trace(
+                        go.Bar(
+                            x=[
+                                row["aspect"]
+                                for row in rows_for_sentiment
+                            ],
+                            y=[
+                                row["event_mentions"]
+                                for row in rows_for_sentiment
+                            ],
+                            name=sentiment_name,
+                        )
+                    )
+
+                fig_review.update_layout(
+                    title="Review sentiment by aspect",
+                    xaxis_title="Aspect",
+                    yaxis_title="Event review mentions",
+                    barmode="group",
+                    height=380,
+                )
+
+                st.plotly_chart(
+                    fig_review,
+                    width="stretch",
+                )
+
+                st.caption(
+                    "Counts compare review evidence observed "
+                    "during the event with the preceding comparison period."
+                )
+
+else:
+
+    st.info(
+        "Review evidence is unavailable for the current event."
+    )
+
+
+st.divider()
+
+
+# ============================================================
+
+# ============================================================
+# ON-DEMAND AI NARRATIVE
+# ============================================================
+
+st.subheader(
+    "Generate AI Narrative"
+)
+
+st.caption(
+    "Generate an event-specific, evidence-grounded narrative. "
+    "A narrative is trusted only after all validation checks pass."
+)
+
+if selected_event_id is not None:
+
+    generate_clicked = st.button(
+        "Generate AI Story",
+        width="stretch",
+        type="primary",
+    )
+
+    if generate_clicked:
+
+        with st.spinner(
+            f"Generating and validating Event {selected_event_id}..."
+        ):
+
+            narrative_response = api_post(
+                f"/api/insights/event/{selected_event_id}/narrative",
+                {},
+                timeout=180,
+            )
+
+        if narrative_response:
+
+            validation = narrative_response.get(
+                "validation",
+                {},
+            )
+
+            if validation.get(
+                "passed",
+                False,
+            ):
+
+                # Successful validation is the commit point.
+                st.session_state.generated_narratives[
+                    int(selected_event_id)
+                ] = narrative_response
+
+                st.session_state.narrative_diagnostics.pop(
+                    int(selected_event_id),
+                    None,
+                )
+
+                st.success(
+                    "AI narrative generated and passed all evidence-grounding checks."
+                )
+
+                st.rerun()
+
+            else:
+
+                # Failed output is diagnostics only. Existing trusted
+                # narratives are never overwritten.
+                st.session_state.narrative_diagnostics[
+                    int(selected_event_id)
+                ] = narrative_response
+
+                st.warning(
+                    "The AI narrative was rejected by the evidence-grounding "
+                    "validator. Deterministic analysis remains authoritative."
+                )
+
+if generation_diagnostic:
+
+    diagnostic_validation = generation_diagnostic.get(
+        "validation",
+        {},
+    )
+
+    with st.expander(
+        "Last AI generation diagnostics",
+        expanded=False,
+    ):
+
+        st.json(
+            diagnostic_validation
+        )
+
+elif dynamic_narrative:
+
+    st.success(
+        f"Validated AI narrative ready for Event {selected_event_id}."
+    )
+
+# ============================================================
 # EXECUTIVE
 # ============================================================
 
 if role == "Executive":
 
     st.header(
-        "Executive Intelligence"
+        "Executive View"
     )
 
-    render_story(
-        story
-    )
+    if story:
+
+        st.caption(
+            "Validated AI narrative for the selected event"
+        )
+
+        render_story(
+            story
+        )
+
+    else:
+
+        st.info(
+            "No validated AI narrative has been generated for this event yet. "
+            "Use Generate AI Story above."
+        )
 
     st.divider()
 
@@ -833,12 +1461,25 @@ if role == "Executive":
 elif role == "Operations":
 
     st.header(
-        "Operations Intelligence"
+        "Operations View"
     )
 
-    render_story(
-        story
-    )
+    if story:
+
+        st.caption(
+            "Validated AI narrative for the selected event"
+        )
+
+        render_story(
+            story
+        )
+
+    else:
+
+        st.info(
+            "No validated AI narrative has been generated for this event yet. "
+            "Use Generate AI Story above."
+        )
 
     st.divider()
 
@@ -1001,7 +1642,7 @@ elif role == "Operations":
 else:
 
     st.header(
-        "Analyst Intelligence"
+        "Analyst View"
     )
 
     st.caption(
@@ -1016,9 +1657,17 @@ else:
         "Executive narrative"
     )
 
-    render_story(
-        executive_story
-    )
+    analyst_executive_story = executive_story
+
+    if analyst_executive_story:
+        render_story(
+            analyst_executive_story
+        )
+
+    else:
+        st.info(
+            "No executive LLM narrative is available for this selected event."
+        )
 
     st.divider()
 
@@ -1030,9 +1679,17 @@ else:
         "Operations narrative"
     )
 
-    render_story(
-        operations_story
-    )
+    analyst_operations_story = operations_story
+
+    if analyst_operations_story:
+        render_story(
+            analyst_operations_story
+        )
+
+    else:
+        st.info(
+            "No operations LLM narrative is available for this selected event."
+        )
 
     st.divider()
 
@@ -1569,6 +2226,100 @@ with e4:
 
 
 # ============================================================
+# KPI SEMANTIC CONTRACT
+# ============================================================
+
+with st.expander(
+    "📐 KPI semantic contract",
+    expanded=False,
+):
+
+    current_kpi_id = str(
+        kpi.get(
+            "id",
+            "marketplace_gmv",
+        )
+    )
+
+    # Prefer the actual YAML contract when it exists in config/.
+    # The dashboard reads the file as text so PyYAML is not required.
+    contract_text = None
+    contract_path = None
+
+    config_dir = PROJECT_ROOT / "config"
+
+    if config_dir.exists():
+
+        for candidate in sorted(
+            list(config_dir.rglob("*.yaml"))
+            + list(config_dir.rglob("*.yml"))
+        ):
+
+            try:
+
+                candidate_text = candidate.read_text(
+                    encoding="utf-8"
+                )
+
+            except (
+                OSError,
+                UnicodeDecodeError,
+            ):
+
+                continue
+
+            if current_kpi_id in candidate_text:
+
+                contract_text = candidate_text
+                contract_path = candidate
+                break
+
+    # Fallback is a transparent preview built from the governed KPI
+    # metadata and the project's documented Marketplace GMV contract.
+    if contract_text is None:
+
+        contract_text = f"""kpi:
+  id: {current_kpi_id}
+  name: {kpi.get('name', 'Marketplace GMV')}
+  formula: SUM(order_item.price)
+  grain: {kpi.get('grain', 'order_item')}
+  primary_date: {kpi.get('primary_date', 'order_purchase_timestamp')}
+  dimensions: [state, category, seller, date]
+  currency: {kpi.get('currency', 'BRL')}
+  materiality:
+    min_absolute_change: 100000
+    min_relative_change: 0.05
+  lineage: [olist_order_items_dataset.csv]
+  access_roles: [executive, operations, analyst]
+"""
+
+    st.code(
+        contract_text,
+        language="yaml",
+    )
+
+    if contract_path is not None:
+
+        st.caption(
+            "Loaded from the governed KPI contract: "
+            f"{contract_path.relative_to(PROJECT_ROOT)}"
+        )
+
+    else:
+
+        st.caption(
+            "Contract preview shown from the governed KPI metadata; "
+            "store the canonical contract under config/ for file-backed display."
+        )
+
+    st.write(
+        "**Purpose:** the semantic contract defines the KPI meaning, "
+        "calculation grain, dimensions, materiality thresholds, lineage, "
+        "currency, and intended access roles before analytical results are interpreted."
+    )
+
+
+# ============================================================
 # LINEAGE
 # ============================================================
 
@@ -1666,6 +2417,78 @@ with st.expander(
     "⚙️ Runtime telemetry"
 ):
 
+    dynamic_telemetry = (
+        st.session_state.generated_narratives.get(
+            int(selected_event_id)
+        )
+        if selected_event_id is not None
+        else None
+    )
+
+    rejected_telemetry = (
+        st.session_state.narrative_diagnostics.get(
+            int(selected_event_id)
+        )
+        if selected_event_id is not None
+        else None
+    )
+
+    if dynamic_telemetry:
+
+        telemetry = {
+            "executive":
+                dynamic_telemetry.get(
+                    "executive",
+                    {},
+                ).get(
+                    "telemetry",
+                    {},
+                ),
+
+            "operations":
+                dynamic_telemetry.get(
+                    "operations",
+                    {},
+                ).get(
+                    "telemetry",
+                    {},
+                ),
+
+            "validation":
+                dynamic_telemetry.get(
+                    "validation",
+                    {},
+                ),
+        }
+
+    elif rejected_telemetry:
+
+        telemetry = {
+            "executive":
+                rejected_telemetry.get(
+                    "executive",
+                    {},
+                ).get(
+                    "telemetry",
+                    {},
+                ),
+
+            "operations":
+                rejected_telemetry.get(
+                    "operations",
+                    {},
+                ).get(
+                    "telemetry",
+                    {},
+                ),
+
+            "validation":
+                rejected_telemetry.get(
+                    "validation",
+                    {},
+                ),
+        }
+
     if telemetry:
 
         tc1, tc2 = st.columns(
@@ -1752,12 +2575,7 @@ with st.expander(
     "📈 Prior KPI events"
 ):
 
-    if events_response:
-
-        historical_events = events_response.get(
-            "events",
-            [],
-        )
+    if historical_events:
 
         st.dataframe(
             historical_events,

@@ -315,6 +315,9 @@ def parse_numeric_claim(raw):
         raw
         .replace(",", "")
         .replace(" ", "")
+        .replace("\u00a0", "")
+        .replace("\u202f", "")
+        .replace("\u2009", "")
     )
 
     is_percent = (
@@ -357,13 +360,22 @@ def parse_numeric_claim(raw):
 # ============================================================
 
 def build_allowed_facts(insight):
+    """
+    Build the complete set of deterministic facts that a dynamic
+    event narrative is allowed to mention.
+
+    Besides core movement/driver facts, this includes:
+      - decomposition percentages
+      - review evidence counts and sentiment counts
+      - customer-experience KPIs
+    """
+
+    facts = set()
 
     movement = insight.get(
         "movement",
-        {}
+        {},
     )
-
-    facts = set()
 
     # --------------------------------------------------------
     # Core movement facts
@@ -395,7 +407,7 @@ def build_allowed_facts(insight):
             )
 
     # --------------------------------------------------------
-    # Safe derived percentages
+    # Safe movement percentages
     # --------------------------------------------------------
 
     previous_gmv = movement.get(
@@ -423,11 +435,9 @@ def build_allowed_facts(insight):
     )
 
     if (
-        previous_gmv
-        is not None
+        previous_gmv is not None
         and previous_gmv != 0
-        and current_gmv
-        is not None
+        and current_gmv is not None
     ):
 
         facts.add(
@@ -436,18 +446,15 @@ def build_allowed_facts(insight):
                     current_gmv
                     - previous_gmv
                 )
-                /
-                previous_gmv
+                / previous_gmv
             )
             * 100
         )
 
     if (
-        previous_orders
-        is not None
+        previous_orders is not None
         and previous_orders != 0
-        and current_orders
-        is not None
+        and current_orders is not None
     ):
 
         facts.add(
@@ -456,18 +463,15 @@ def build_allowed_facts(insight):
                     current_orders
                     - previous_orders
                 )
-                /
-                previous_orders
+                / previous_orders
             )
             * 100
         )
 
     if (
-        previous_aov
-        is not None
+        previous_aov is not None
         and previous_aov != 0
-        and current_aov
-        is not None
+        and current_aov is not None
     ):
 
         facts.add(
@@ -476,11 +480,55 @@ def build_allowed_facts(insight):
                     current_aov
                     - previous_aov
                 )
-                /
-                previous_aov
+                / previous_aov
             )
             * 100
         )
+
+    # --------------------------------------------------------
+    # Decomposition percentages
+    # --------------------------------------------------------
+
+    gmv_change = movement.get(
+        "gmv_change"
+    )
+
+    volume_effect = movement.get(
+        "volume_effect"
+    )
+
+    aov_effect = movement.get(
+        "aov_effect"
+    )
+
+    if (
+        gmv_change is not None
+        and abs(float(gmv_change)) > 1e-12
+    ):
+
+        if volume_effect is not None:
+
+            facts.add(
+                abs(
+                    float(volume_effect)
+                )
+                / abs(
+                    float(gmv_change)
+                )
+                * 100
+            )
+
+        if aov_effect is not None:
+
+            facts.add(
+                abs(
+                    float(aov_effect)
+                )
+                / abs(
+                    float(gmv_change)
+                )
+                * 100
+            )
 
     # --------------------------------------------------------
     # Driver facts
@@ -496,8 +544,10 @@ def build_allowed_facts(insight):
             {}
         )
 
-        gmv_change = contribution.get(
-            "gmv_change"
+        driver_gmv_change = (
+            contribution.get(
+                "gmv_change"
+            )
         )
 
         share = contribution.get(
@@ -515,43 +565,297 @@ def build_allowed_facts(insight):
             )
         )
 
-        if gmv_change is not None:
+        if driver_gmv_change is not None:
 
             facts.add(
                 float(
-                    gmv_change
+                    driver_gmv_change
                 )
             )
 
         if share is not None:
 
-            # Example:
-            # 0.3365 -> 33.65
             facts.add(
-                float(share) * 100
+                float(share)
+                * 100
             )
 
         if confidence is not None:
-
-            # Confidence can appear in either form:
-            # 0.418 or 41.8%
-            #
-            # Keep BOTH available.
 
             facts.add(
                 float(confidence)
             )
 
             facts.add(
-                float(confidence) * 100
+                float(confidence)
+                * 100
             )
+
+        # Allow exact driver-level review counts already stored
+        # inside the selected-event driver evidence.
+        for evidence_key in (
+            "review",
+            "context",
+        ):
+
+            evidence = driver.get(
+                "evidence",
+                {}
+            ).get(
+                evidence_key,
+                {}
+            )
+
+            for field in (
+                "event_records",
+                "comparison_records",
+            ):
+
+                value = evidence.get(
+                    field
+                )
+
+                if value is not None:
+
+                    facts.add(
+                        float(value)
+                    )
+
+    # --------------------------------------------------------
+    # Event-level numerical facts
+    # --------------------------------------------------------
+
+    event = insight.get(
+        "event",
+        {}
+    )
+
+    for field in (
+        "event_id",
+        "duration_days",
+        "anomalous_days",
+        "peak_change",
+        "peak_z_score",
+        "cumulative_absolute_impact",
+        "priority_score",
+    ):
+
+        value = event.get(
+            field
+        )
+
+        if value is not None:
+
+            facts.add(
+                float(value)
+            )
+
+    # --------------------------------------------------------
+    # Dynamic review evidence
+    # --------------------------------------------------------
+
+    review_evidence = insight.get(
+        "review_evidence",
+        {}
+    )
+
+    for field in (
+        "event_review_records",
+        "comparison_review_records",
+        "record_count",
+    ):
+
+        value = review_evidence.get(
+            field
+        )
+
+        if value is not None:
+
+            facts.add(
+                float(value)
+            )
+
+    # Derived percentage changes that may be stated by a narrative.
+    for row in review_evidence.get(
+        "aspect_summary",
+        []
+    ):
+
+        event_mentions = (
+            float(
+                row.get(
+                    "event_mentions",
+                    0,
+                )
+                or 0
+            )
+        )
+
+        comparison_mentions = (
+            float(
+                row.get(
+                    "comparison_mentions",
+                    0,
+                )
+                or 0
+            )
+        )
+
+        if comparison_mentions != 0:
+
+            facts.add(
+                (
+                    (
+                        event_mentions
+                        - comparison_mentions
+                    )
+                    / comparison_mentions
+                )
+                * 100
+            )
+
+    for row in review_evidence.get(
+        "aspect_summary",
+        []
+    ):
+
+        for field in (
+            "event_mentions",
+            "comparison_mentions",
+            "mention_change",
+        ):
+
+            value = row.get(
+                field
+            )
+
+            if value is not None:
+
+                facts.add(
+                    float(value)
+                )
+
+        sentiment = row.get(
+            "sentiment",
+            {}
+        )
+
+        if isinstance(
+            sentiment,
+            dict,
+        ):
+
+            for sentiment_row in sentiment.values():
+
+                if not isinstance(
+                    sentiment_row,
+                    dict,
+                ):
+                    continue
+
+                for field in (
+                    "event_mentions",
+                    "comparison_mentions",
+                    "mention_change",
+                ):
+
+                    value = sentiment_row.get(
+                        field
+                    )
+
+                    if value is not None:
+
+                        facts.add(
+                            float(value)
+                        )
+
+    for row in review_evidence.get(
+        "sentiment_by_aspect",
+        []
+    ):
+
+        for field in (
+            "event_mentions",
+            "comparison_mentions",
+            "mention_change",
+        ):
+
+            value = row.get(
+                field
+            )
+
+            if value is not None:
+
+                facts.add(
+                    float(value)
+                )
+
+    # --------------------------------------------------------
+    # Dynamic customer-experience KPIs
+    # --------------------------------------------------------
+
+    customer_experience = insight.get(
+        "customer_experience",
+        {}
+    )
+
+    for metric_name in (
+        "late_delivery_rate",
+        "review_score",
+    ):
+
+        metric = customer_experience.get(
+            metric_name,
+            {}
+        )
+
+        if not isinstance(
+            metric,
+            dict,
+        ):
+            continue
+
+        for field in (
+            "current",
+            "previous",
+            "change",
+            "change_pp",
+            "current_late_orders",
+            "current_delivered_orders",
+            "previous_late_orders",
+            "previous_delivered_orders",
+            "current_reviews",
+            "previous_reviews",
+        ):
+
+            value = metric.get(
+                field
+            )
+
+            if value is not None:
+
+                numeric_value = float(
+                    value
+                )
+
+                facts.add(
+                    numeric_value
+                )
+
+                # Rates are stored as decimal fractions in the
+                # deterministic evidence package but narratives
+                # commonly express them as percentages.
+                if metric_name == "late_delivery_rate" and field in {
+                    "current",
+                    "previous",
+                    "change",
+                }:
+                    facts.add(
+                        numeric_value * 100
+                    )
 
     return facts
 
-
-# ============================================================
-# NUMERIC MATCHING
-# ============================================================
 
 def approximately_matches(
     value,

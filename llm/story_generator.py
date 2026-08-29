@@ -1,7 +1,9 @@
 from pathlib import Path
 import json
 import os
+import re
 import time
+import requests
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -21,23 +23,115 @@ INSIGHT_PATH = (
 )
 
 
+load_dotenv()
+
 # ============================================================
 # CONFIG
 # ============================================================
 
-MODEL_NAME = "openai/gpt-oss-120b"
+LLM_PROVIDER = os.getenv(
+    "LLM_PROVIDER",
+    "groq",
+).strip().lower()
+
+MODEL_NAME = os.getenv(
+    "LLM_MODEL",
+    "openai/gpt-oss-120b",
+).strip()
+
+# Comma-separated provider:model candidates.
+# Example:
+# openrouter:stealth/ox-alpha,
+# openrouter:anthropic/claude-sonnet-4.6,
+# groq:openai/gpt-oss-120b
+LLM_FALLBACKS = [
+    item.strip()
+    for item in os.getenv(
+        "LLM_FALLBACKS",
+        "",
+    ).split(",")
+    if item.strip()
+]
 
 MODEL_PURPOSE = (
     "Evidence-grounded narrative synthesis only"
 )
 
-MAX_OUTPUT_TOKENS = 850
+MAX_OUTPUT_TOKENS = int(
+    os.getenv(
+        "LLM_MAX_OUTPUT_TOKENS",
+        "1200",
+    )
+)
 
-TEMPERATURE = 0.1
+TEMPERATURE = float(
+    os.getenv(
+        "LLM_TEMPERATURE",
+        "0.1",
+    )
+)
 
-REASONING_EFFORT = "low"
+REASONING_EFFORT = os.getenv(
+    "LLM_REASONING_EFFORT",
+    "low",
+)
 
 INCLUDE_REASONING = False
+
+LLM_DEBUG = os.getenv(
+    "LLM_DEBUG",
+    "true",
+).strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
+
+def get_llm_configuration():
+    """
+    Return the effective LLM configuration loaded when this module starts.
+    API keys are never returned.
+    """
+    return {
+        "provider":
+            LLM_PROVIDER,
+
+        "model":
+            MODEL_NAME,
+
+        "fallbacks":
+            LLM_FALLBACKS.copy(),
+
+        "openrouter_key_configured":
+            bool(
+                os.getenv(
+                    "OPENROUTER_API_KEY"
+                )
+            ),
+
+        "groq_key_configured":
+            bool(
+                os.getenv(
+                    "GROQ_API_KEY"
+                )
+            ),
+
+        "openai_key_configured":
+            bool(
+                os.getenv(
+                    "OPENAI_API_KEY"
+                )
+            ),
+
+        "anthropic_key_configured":
+            bool(
+                os.getenv(
+                    "ANTHROPIC_API_KEY"
+                )
+            ),
+    }
 
 
 # ============================================================
@@ -114,6 +208,17 @@ def load_insight():
     return insight
 
 
+def safe_round(value, digits=2):
+    """Null-safe numeric rounding for sparse event evidence."""
+    if value is None:
+        return None
+
+    try:
+        return round(float(value), digits)
+    except (TypeError, ValueError):
+        return None
+
+
 # ============================================================
 # BUILD COMPACT LLM CONTEXT
 # ============================================================
@@ -122,24 +227,51 @@ def build_llm_context(
     insight,
     max_drivers=5,
 ):
-    """
-    Create a compact representation of the canonical insight.
+    """Create a compact JSON-safe context for the selected event."""
 
-    The LLM receives only the information needed for narrative
-    generation rather than the entire analytical state.
-    """
+    insight = insight or {}
 
-    movement = insight["movement"]
+    movement = (
+        insight.get("movement", {})
+        or {}
+    )
 
-    event = insight["event"]
+    event = (
+        insight.get("event", {})
+        or {}
+    )
+
+    raw_drivers = (
+        insight.get("drivers", [])
+        or []
+    )
+
+    def driver_share(item):
+        contribution = (
+            item.get(
+                "observed_contribution",
+                {},
+            )
+            or {}
+        )
+
+        try:
+            return abs(
+                float(
+                    contribution.get(
+                        "share"
+                    )
+                )
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return 0.0
 
     drivers = sorted(
-        insight.get("drivers", []),
-        key=lambda item: abs(
-            item[
-                "observed_contribution"
-            ]["share"]
-        ),
+        raw_drivers,
+        key=driver_share,
         reverse=True,
     )
 
@@ -148,65 +280,77 @@ def build_llm_context(
     for driver in drivers[:max_drivers]:
 
         contribution = (
-            driver[
-                "observed_contribution"
-            ]
+            driver.get(
+                "observed_contribution",
+                {},
+            )
+            or {}
         )
 
         confidence = (
-            driver[
-                "confidence"
-            ]
+            driver.get(
+                "confidence",
+                {},
+            )
+            or {}
         )
 
         action = (
             driver.get(
                 "action",
-                {}
+                {},
             )
+            or {}
+        )
+
+        share = contribution.get(
+            "share"
+        )
+
+        contribution_pct = (
+            float(share) * 100
+            if share is not None
+            else None
         )
 
         compact_drivers.append(
             {
                 "type":
-                    driver[
+                    driver.get(
                         "driver_type"
-                    ],
+                    ),
 
                 "driver":
-                    driver[
+                    driver.get(
                         "driver"
-                    ],
+                    ),
 
                 "gmv_change":
-                    round(
-                        contribution[
+                    safe_round(
+                        contribution.get(
                             "gmv_change"
-                        ],
+                        ),
                         2,
                     ),
 
                 "contribution_pct":
-                    round(
-                        contribution[
-                            "share"
-                        ]
-                        * 100,
+                    safe_round(
+                        contribution_pct,
                         2,
                     ),
 
                 "confidence":
-                    round(
-                        confidence[
+                    safe_round(
+                        confidence.get(
                             "overall"
-                        ],
+                        ),
                         3,
                     ),
 
                 "evidence_status":
-                    driver[
+                    driver.get(
                         "status"
-                    ],
+                    ),
 
                 "decision":
                     action.get(
@@ -215,162 +359,287 @@ def build_llm_context(
             }
         )
 
-    kpi = insight.get(
-        "kpi",
-        {}
+    actions = []
+
+    for action in (
+        insight.get(
+            "actions",
+            [],
+        )
+        or []
+    )[:8]:
+
+        contribution_share = action.get(
+            "contribution_share"
+        )
+
+        actions.append(
+            {
+                "driver_type":
+                    action.get(
+                        "driver_type"
+                    ),
+
+                "driver":
+                    action.get(
+                        "driver"
+                    ),
+
+                "contribution_pct":
+                    safe_round(
+                        (
+                            float(
+                                contribution_share
+                            ) * 100
+                            if contribution_share is not None
+                            else None
+                        ),
+                        2,
+                    ),
+
+                "confidence":
+                    safe_round(
+                        action.get(
+                            "confidence"
+                        ),
+                        3,
+                    ),
+
+                "evidence_status":
+                    action.get(
+                        "evidence_status"
+                    ),
+
+                "decision":
+                    action.get(
+                        "decision"
+                    ),
+
+                "owner":
+                    action.get(
+                        "owner"
+                    ),
+
+                "action":
+                    action.get(
+                        "action"
+                    ),
+            }
+        )
+
+    kpi = (
+        insight.get(
+            "kpi",
+            {},
+        )
+        or {}
     )
 
-    return {
-        "kpi": {
-            "id":
-                kpi.get(
-                    "id"
-                ),
+    return make_json_serializable(
+        {
+            "kpi": {
+                "id":
+                    kpi.get("id"),
 
-            "name":
-                kpi.get(
-                    "name"
-                ),
+                "name":
+                    kpi.get("name"),
 
-            "currency":
-                kpi.get(
-                    "currency",
-                    "BRL",
-                ),
+                "currency":
+                    kpi.get(
+                        "currency",
+                        "BRL",
+                    )
+                    or "BRL",
 
-            "currency_symbol":
-                kpi.get(
-                    "currency_symbol",
-                    "R$",
-                ),
-        },
+                "currency_symbol":
+                    kpi.get(
+                        "currency_symbol",
+                        "R$",
+                    )
+                    or "R$",
+            },
 
-        "event": {
-            "start":
-                event[
-                    "start_date"
-                ],
+            "event": {
+                "event_id":
+                    event.get("event_id"),
 
-            "end":
-                event[
-                    "end_date"
-                ],
+                "start":
+                    event.get("start_date"),
 
-            "duration_days":
-                event[
-                    "duration_days"
-                ],
+                "end":
+                    event.get("end_date"),
 
-            "direction":
-                event[
-                    "direction"
-                ],
+                "duration_days":
+                    event.get("duration_days"),
 
-            "priority":
-                event[
-                    "investigation_priority"
-                ],
-        },
+                "direction":
+                    event.get("direction"),
 
-        "movement": {
-            "previous_gmv":
-                round(
-                    movement[
-                        "previous_gmv"
-                    ],
-                    2,
-                ),
-
-            "current_gmv":
-                round(
-                    movement[
-                        "current_gmv"
-                    ],
-                    2,
-                ),
-
-            "gmv_change":
-                round(
-                    movement[
-                        "gmv_change"
-                    ],
-                    2,
-                ),
-
-            "previous_orders":
-                movement[
-                    "previous_orders"
-                ],
-
-            "current_orders":
-                movement[
-                    "current_orders"
-                ],
-
-            "orders_change":
-                movement[
-                    "orders_change"
-                ],
-
-            "previous_aov":
-                round(
-                    movement[
-                        "previous_aov"
-                    ],
-                    2,
-                ),
-
-            "current_aov":
-                round(
-                    movement[
-                        "current_aov"
-                    ],
-                    2,
-                ),
-
-            "aov_change":
-                round(
-                    movement[
-                        "aov_change"
-                    ],
-                    2,
-                ),
-
-            "volume_effect":
-                round(
-                    movement[
-                        "volume_effect"
-                    ],
-                    2,
-                ),
-
-            "aov_effect":
-                round(
-                    movement[
-                        "aov_effect"
-                    ],
-                    2,
-                ),
-
-            "residual_effect":
-                round(
-                    movement.get(
-                        "residual_effect",
-                        0.0,
+                "priority":
+                    event.get(
+                        "investigation_priority"
                     ),
-                    2,
-                ),
-        },
 
-        "drivers":
-            compact_drivers,
+                "event_type":
+                    event.get("event_type"),
 
-        "data_quality":
-            insight.get(
-                "data_quality",
-                {},
+                "source_coverage":
+                    event.get(
+                        "source_coverage"
+                    ),
+            },
+
+            "movement": {
+                "previous_gmv":
+                    safe_round(
+                        movement.get(
+                            "previous_gmv"
+                        ),
+                        2,
+                    ),
+
+                "current_gmv":
+                    safe_round(
+                        movement.get(
+                            "current_gmv"
+                        ),
+                        2,
+                    ),
+
+                "gmv_change":
+                    safe_round(
+                        movement.get(
+                            "gmv_change"
+                        ),
+                        2,
+                    ),
+
+                "previous_orders":
+                    movement.get(
+                        "previous_orders"
+                    ),
+
+                "current_orders":
+                    movement.get(
+                        "current_orders"
+                    ),
+
+                "orders_change":
+                    movement.get(
+                        "orders_change"
+                    ),
+
+                "previous_aov":
+                    safe_round(
+                        movement.get(
+                            "previous_aov"
+                        ),
+                        2,
+                    ),
+
+                "current_aov":
+                    safe_round(
+                        movement.get(
+                            "current_aov"
+                        ),
+                        2,
+                    ),
+
+                "aov_change":
+                    safe_round(
+                        movement.get(
+                            "aov_change"
+                        ),
+                        2,
+                    ),
+
+                "volume_effect":
+                    safe_round(
+                        movement.get(
+                            "volume_effect"
+                        ),
+                        2,
+                    ),
+
+                "aov_effect":
+                    safe_round(
+                        movement.get(
+                            "aov_effect"
+                        ),
+                        2,
+                    ),
+
+                "residual_effect":
+                    safe_round(
+                        movement.get(
+                            "residual_effect"
+                        ),
+                        2,
+                    ),
+            },
+
+            "drivers":
+                compact_drivers,
+
+            "actions":
+                actions,
+
+            "review_evidence":
+                (
+                    insight.get(
+                        "review_evidence",
+                        {},
+                    )
+                    or {}
             ),
-    }
+
+            "customer_experience":
+                (
+                    insight.get(
+                        "customer_experience",
+                        {},
+                    )
+                    or {}
+            ),
+
+            "causal":
+                (
+                    insight.get(
+                        "causal",
+                        {},
+                    )
+                    or {}
+            ),
+
+            "data_quality":
+                (
+                    insight.get(
+                        "data_quality",
+                        {},
+                    )
+                    or {}
+            ),
+
+            "grounding": {
+                "source_type":
+                    "DYNAMIC_EVENT_INVESTIGATION",
+
+                "event_id":
+                    event.get(
+                        "event_id"
+                    ),
+
+                "authoritative_for_selected_event":
+                    True,
+
+                "llm_role":
+                    (
+                        "Synthesize supplied evidence only; "
+                        "do not calculate facts."
+                    ),
+            },
+        }
+    )
 
 
 # ============================================================
@@ -481,10 +750,11 @@ Maximum length: approximately 250 words.
 DATA:
 
 {json.dumps(
-    context,
-    indent=2,
-    ensure_ascii=False,
-)}
+        context,
+        indent=2,
+        ensure_ascii=False,
+    )}
+{feedback_block}
 """
 
 
@@ -554,149 +824,1185 @@ Do not create a large table.
 DATA:
 
 {json.dumps(
-    context,
-    indent=2,
-    ensure_ascii=False,
-)}
+        context,
+        indent=2,
+        ensure_ascii=False,
+    )}
 """
 
 
 # ============================================================
-# GROQ CALL
+# JSON-SAFE CONTEXT
 # ============================================================
+
+def make_json_serializable(value):
+    """
+    Recursively convert dates, NumPy scalars, dictionaries and
+    sequences into values accepted by json.dumps().
+    """
+
+    if value is None:
+        return None
+
+    if isinstance(
+        value,
+        (str, int, float, bool),
+    ):
+        return value
+
+    if isinstance(
+        value,
+        (Path,),
+    ):
+        return str(value)
+
+    # datetime/date/Pandas Timestamp-like objects.
+    if hasattr(value, "isoformat") and callable(value.isoformat):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+
+    # NumPy/Pandas scalar values.
+    if hasattr(value, "item"):
+        try:
+            return make_json_serializable(
+                value.item()
+            )
+        except Exception:
+            pass
+
+    if isinstance(value, dict):
+        return {
+            str(key): make_json_serializable(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, (list, tuple, set)):
+        return [
+            make_json_serializable(item)
+            for item in value
+        ]
+
+    # Last-resort string conversion for uncommon scalar objects.
+    return str(value)
+
+
+# ============================================================
+# DYNAMIC EVENT PROMPTS
+# ============================================================
+
+def build_dynamic_event_context(
+    investigation,
+    max_drivers=6,
+    max_review_aspects=6,
+):
+    """
+    Normalize a stateless selected-event investigation into a compact,
+    fully JSON-safe evidence package for the narrative layer.
+
+    All derived percentages used in the prompt are computed here rather
+    than asking the LLM to calculate them.
+    """
+
+    context = build_llm_context(
+        investigation,
+        max_drivers=max_drivers,
+    )
+
+    event = investigation.get(
+        "event",
+        {},
+    )
+
+    movement = investigation.get(
+        "movement",
+        {},
+    )
+
+    # --------------------------------------------------------
+    # Event metadata
+    # --------------------------------------------------------
+
+    context["event"]["event_id"] = event.get(
+        "event_id"
+    )
+
+    context["event"]["event_type"] = event.get(
+        "event_type"
+    )
+
+    context["event"]["source_coverage"] = event.get(
+        "source_coverage"
+    )
+
+    context["event"]["anomalous_days"] = event.get(
+        "anomalous_days"
+    )
+
+    context["event"]["peak_z_score"] = event.get(
+        "peak_z_score"
+    )
+
+    # --------------------------------------------------------
+    # Deterministic decomposition ratios
+    # --------------------------------------------------------
+
+    gmv_change = float(
+        movement.get(
+            "gmv_change",
+            0,
+        )
+        or 0
+    )
+
+    volume_effect = movement.get(
+        "volume_effect"
+    )
+
+    aov_effect = movement.get(
+        "aov_effect"
+    )
+
+    volume_share_pct = None
+    aov_share_pct = None
+
+    if abs(gmv_change) > 1e-12:
+
+        if volume_effect is not None:
+            volume_share_pct = round(
+                abs(float(volume_effect))
+                / abs(gmv_change)
+                * 100,
+                2,
+            )
+
+        if aov_effect is not None:
+            aov_share_pct = round(
+                abs(float(aov_effect))
+                / abs(gmv_change)
+                * 100,
+                2,
+            )
+
+    context["decomposition"] = {
+        "volume_effect":
+            volume_effect,
+
+        "aov_effect":
+            aov_effect,
+
+        "residual_effect":
+            movement.get(
+                "residual_effect",
+                0.0,
+            ),
+
+        "volume_share_of_absolute_change_pct":
+            volume_share_pct,
+
+        "aov_share_of_absolute_change_pct":
+            aov_share_pct,
+    }
+
+    # --------------------------------------------------------
+    # Review evidence
+    # --------------------------------------------------------
+
+    review = investigation.get(
+        "review_evidence",
+        {},
+    )
+
+    aspect_rows = []
+
+    for aspect in review.get(
+        "aspect_summary",
+        [],
+    ):
+
+        sentiment = aspect.get(
+            "sentiment",
+            {},
+        )
+
+        positive = sentiment.get(
+            "positive",
+            {},
+        )
+
+        negative = sentiment.get(
+            "negative",
+            {},
+        )
+
+        neutral = sentiment.get(
+            "neutral",
+            {},
+        )
+
+        aspect_rows.append(
+            {
+                "aspect":
+                    aspect.get(
+                        "aspect"
+                    ),
+
+                "event_mentions":
+                    int(
+                        aspect.get(
+                            "event_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "comparison_mentions":
+                    int(
+                        aspect.get(
+                            "comparison_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "mention_change":
+                    int(
+                        aspect.get(
+                            "mention_change",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "positive_event":
+                    int(
+                        positive.get(
+                            "event_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "positive_comparison":
+                    int(
+                        positive.get(
+                            "comparison_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "negative_event":
+                    int(
+                        negative.get(
+                            "event_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "negative_comparison":
+                    int(
+                        negative.get(
+                            "comparison_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "neutral_event":
+                    int(
+                        neutral.get(
+                            "event_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+
+                "neutral_comparison":
+                    int(
+                        neutral.get(
+                            "comparison_mentions",
+                            0,
+                        )
+                        or 0
+                    ),
+            }
+        )
+
+    aspect_rows.sort(
+        key=lambda row: (
+            abs(
+                row["mention_change"]
+            ),
+            row["event_mentions"],
+        ),
+        reverse=True,
+    )
+
+    context["review_evidence"] = {
+        # `record_count` is the number of aspect x sentiment groups.
+        "aspect_sentiment_groups":
+            review.get(
+                "record_count",
+                0,
+            ),
+
+        # These are the actual underlying evidence-row counts.
+        "event_review_records":
+            review.get(
+                "event_review_records",
+                0,
+            ),
+
+        "comparison_review_records":
+            review.get(
+                "comparison_review_records",
+                0,
+            ),
+
+        "source":
+            review.get(
+                "source",
+                "unknown",
+            ),
+
+        "dynamic":
+            bool(
+                review.get(
+                    "dynamic",
+                    False,
+                )
+            ),
+
+        "aspects":
+            aspect_rows[:max_review_aspects],
+    }
+
+    # --------------------------------------------------------
+    # Customer experience
+    # --------------------------------------------------------
+
+    experience = investigation.get(
+        "customer_experience",
+        {},
+    )
+
+    # Only add if available. This keeps the batch generator unaffected.
+    if experience:
+
+        context["customer_experience"] = (
+            make_json_serializable(
+                experience
+            )
+        )
+
+    # --------------------------------------------------------
+    # Explicit grounding metadata
+    # --------------------------------------------------------
+
+    context["grounding"] = {
+        "source_type":
+            "DYNAMIC_EVENT_INVESTIGATION",
+
+        "event_id":
+            event.get(
+                "event_id"
+            ),
+
+        "authoritative_for_selected_event":
+            True,
+
+        "llm_role":
+            "Synthesize supplied evidence only; do not calculate facts.",
+    }
+
+    return make_json_serializable(
+        context
+    )
+
+
+def build_dynamic_executive_prompt(
+    investigation,
+    validation_feedback=None,
+):
+    """
+    Executive narrative prompt for an arbitrary selected event.
+    """
+
+    context = build_dynamic_event_context(
+        investigation,
+        max_drivers=6,
+        max_review_aspects=6,
+    )
+
+    feedback_block = ""
+    if validation_feedback:
+        feedback_block = f"""
+
+VALIDATION FEEDBACK FROM A PREVIOUS ATTEMPT:
+The previous narrative did not pass grounding validation.
+Correct ONLY the issues listed below. Do not invent new facts.
+
+{json.dumps(
+            validation_feedback,
+            indent=2,
+            ensure_ascii=False,
+        )}
+"""
+
+    return f"""
+Create a concise executive KPI story for the SELECTED EVENT.
+
+Use ONLY the supplied structured evidence package.
+
+This is an event-specific investigation. The package marked
+DYNAMIC_EVENT_INVESTIGATION is authoritative for this event.
+
+Do NOT use information from another event, stored narrative,
+outside knowledge, or unstated assumptions.
+
+IMPORTANT:
+- Do not calculate new KPI values.
+- Use supplied decomposition percentages when available.
+- Do not say review evidence is unavailable when
+  grounding.review_evidence contains records.
+- "aspect_sentiment_groups" is NOT the number of reviews.
+- When reporting review volume, use event_review_records or
+  comparison_review_records.
+- Review evidence describes observed customer feedback patterns;
+  it does NOT establish causation.
+- If source coverage is SOURCE_EDGE or priority is ABSTAIN,
+  explicitly communicate the limitation.
+- Never force a root-cause conclusion when the evidence is weak.
+
+CURRENCY:
+All monetary values are BRL.
+Display monetary values with "R$".
+Never use "$".
+Never convert currency.
+
+Required format:
+
+HEADLINE:
+Two concise sentences.
+
+WHAT CHANGED:
+Explain the selected event's KPI movement and magnitude.
+
+MAIN DRIVER:
+Explain whether volume or AOV contributed more, using the
+supplied decomposition and supplied decomposition percentages.
+
+WHERE:
+Mention the most important observed contributor only when
+material.
+
+CUSTOMER EVIDENCE:
+Use the supplied review/aspect evidence when available.
+Mention meaningful changes in review mentions or sentiment,
+but do not present them as causal proof.
+
+WHAT WE KNOW:
+Respect exact evidence statuses.
+Explain uncertainty when root cause is not established.
+
+NEXT STEP:
+Use only the supplied action/decision evidence.
+Never recommend acting on a CONTRADICTED hypothesis.
+ABSTAIN means collect more evidence.
+WEAK means investigate rather than conclude.
+
+Keep the response below approximately 250 words.
+
+SELECTED EVENT EVIDENCE:
+{json.dumps(
+        context,
+        indent=2,
+        ensure_ascii=False,
+    )}
+{feedback_block}
+"""
+
+
+def build_dynamic_operations_prompt(
+    investigation,
+    validation_feedback=None,
+):
+    """
+    Operations narrative prompt for an arbitrary selected event.
+    """
+
+    context = build_dynamic_event_context(
+        investigation,
+        max_drivers=6,
+        max_review_aspects=6,
+    )
+
+    feedback_block = ""
+    if validation_feedback:
+        feedback_block = f"""
+
+VALIDATION FEEDBACK FROM A PREVIOUS ATTEMPT:
+The previous narrative did not pass grounding validation.
+Correct ONLY the issues listed below. Do not invent new facts.
+
+{json.dumps(
+            validation_feedback,
+            indent=2,
+            ensure_ascii=False,
+        )}
+"""
+
+    return f"""
+Create a concise operations-focused explanation for the
+SELECTED EVENT.
+
+Use ONLY the supplied structured evidence package.
+
+This is an event-specific investigation. The package marked
+DYNAMIC_EVENT_INVESTIGATION is authoritative for this event.
+
+Do NOT use information from another event or a previously
+generated narrative.
+
+Required format:
+
+KPI MOVEMENT:
+Explain the movement.
+
+ANALYTICAL DECOMPOSITION:
+Explain volume versus AOV using the supplied values and
+supplied decomposition percentages.
+
+TOP INVESTIGATION AREAS:
+Mention at most three material observed contributors.
+
+CUSTOMER / REVIEW EVIDENCE:
+Use the supplied aspect and sentiment evidence when available.
+Describe observed changes such as increases/decreases in
+negative or positive mentions. Do not claim those observations
+caused the KPI movement.
+
+ACTIONS:
+Only describe decisions/actions that are explicitly supplied.
+
+DATA QUALITY:
+Mention relevant limitations, including missing context or
+source-edge coverage.
+
+RULES:
+- Never invent a root cause.
+- Never claim a segment caused the KPI movement.
+- Never change confidence or evidence status.
+- CONTRADICTED means do not act.
+- ABSTAIN means collect more evidence.
+- WEAK means investigate rather than conclude.
+- Observed contribution is not causation.
+- Do not calculate alternative metrics.
+- Use supplied percentages rather than performing new arithmetic.
+- Do not say customer/review evidence is unavailable when it
+  is supplied in the evidence package.
+- Do not describe the aspect/sentiment group count as the number
+  of review records. Use the explicit event_review_records field.
+- Keep the response below approximately 300 words.
+
+SELECTED EVENT EVIDENCE:
+{json.dumps(
+        context,
+        indent=2,
+        ensure_ascii=False,
+    )}
+{feedback_block}
+"""
+
+
+def parse_model_target(
+    provider,
+    model,
+):
+    """Return normalized provider/model pair."""
+
+    provider = (
+        provider or "groq"
+    ).strip().lower()
+
+    model = (
+        model or ""
+    ).strip()
+
+    if not model:
+        raise ValueError(
+            "LLM model name is empty."
+        )
+
+    return provider, model
+
+
+def configured_model_candidates():
+    """
+    Build ordered primary + fallback model candidates.
+
+    The primary candidate is always tried first.
+    Duplicate provider/model pairs are removed while preserving order.
+    """
+
+    candidates = [
+        (
+            LLM_PROVIDER,
+            MODEL_NAME,
+        )
+    ]
+
+    for item in LLM_FALLBACKS:
+
+        if ":" not in item:
+            continue
+
+        provider, model = item.split(
+            ":",
+            1,
+        )
+
+        candidates.append(
+            (
+                provider.strip().lower(),
+                model.strip(),
+            )
+        )
+
+    result = []
+    seen = set()
+
+    for provider, model in candidates:
+
+        provider, model = parse_model_target(
+            provider,
+            model,
+        )
+
+        key = (
+            provider,
+            model,
+        )
+
+        if key in seen:
+            continue
+
+        seen.add(key)
+        result.append(key)
+
+    return result
+
+
+def create_provider_client(
+    provider,
+):
+    """
+    Create a provider client.
+
+    OpenRouter is handled with direct HTTP in generate_story because
+    Nemotron 3 Ultra is documented on OpenRouter's Anthropic Messages
+    endpoint (/api/v1/messages), not only the OpenAI chat-completions path.
+    """
+
+    load_dotenv()
+
+    provider = (
+        provider or ""
+    ).strip().lower()
+
+    if provider == "openrouter":
+
+        if not os.getenv(
+            "OPENROUTER_API_KEY"
+        ):
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not configured."
+            )
+
+        # No SDK client is required for OpenRouter Messages API.
+        return None
+
+    if provider == "groq":
+
+        api_key = os.getenv(
+            "GROQ_API_KEY"
+        )
+
+        if not api_key:
+            raise RuntimeError(
+                "GROQ_API_KEY is not configured."
+            )
+
+        return Groq(
+            api_key=api_key
+        )
+
+    if provider == "openai":
+
+        from openai import OpenAI
+
+        api_key = os.getenv(
+            "OPENAI_API_KEY"
+        )
+
+        if not api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY is not configured."
+            )
+
+        return OpenAI(
+            api_key=api_key
+        )
+
+    if provider == "anthropic":
+
+        from anthropic import Anthropic
+
+        api_key = os.getenv(
+            "ANTHROPIC_API_KEY"
+        )
+
+        if not api_key:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is not configured."
+            )
+
+        return Anthropic(
+            api_key=api_key
+        )
+
+    raise RuntimeError(
+        "Unsupported LLM provider: "
+        f"{provider}"
+    )
+
 
 def generate_story(
     client,
     prompt,
     system_prompt,
+    provider=None,
+    model=None,
 ):
+    """
+    Generate one narrative.
+
+    OpenRouter uses the Anthropic Messages-compatible endpoint so that
+    Nemotron 3 Ultra receives the API format documented for that route.
+    Other providers use their native/OpenAI-compatible SDKs.
+    """
+
+    provider = (
+        provider or LLM_PROVIDER
+    ).strip().lower()
+
+    model = (
+        model or MODEL_NAME
+    ).strip()
 
     start_time = time.perf_counter()
 
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
+    if LLM_DEBUG:
 
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {
-                "role": "user",
-                "content": prompt,
-            },
-        ],
+        print(
+            f"[LLM] START provider={provider} "
+            f"model={model}"
+        )
 
-        temperature=TEMPERATURE,
+    try:
 
-        reasoning_effort=REASONING_EFFORT,
+        if provider == "openrouter":
 
-        include_reasoning=INCLUDE_REASONING,
+            api_key = os.getenv(
+                "OPENROUTER_API_KEY"
+            )
 
-        max_completion_tokens=MAX_OUTPUT_TOKENS,
-    )
+            if not api_key:
+                raise RuntimeError(
+                    "OPENROUTER_API_KEY is not configured."
+                )
+
+            response = requests.post(
+                "https://openrouter.ai/api/v1/messages",
+
+                headers={
+                    "Authorization":
+                        f"Bearer {api_key}",
+
+                    "Content-Type":
+                        "application/json",
+
+                    "HTTP-Referer":
+                        "http://localhost:8501",
+
+                    "X-Title":
+                        "BusinessIntelligence.ai",
+                },
+
+                json={
+                    "model":
+                        model,
+
+                    "system":
+                        system_prompt,
+
+                    "messages": [
+                        {
+                            "role":
+                                "user",
+
+                            "content":
+                                prompt,
+                        }
+                    ],
+
+                    "temperature":
+                        TEMPERATURE,
+
+                    "max_tokens":
+                        MAX_OUTPUT_TOKENS,
+
+                    "reasoning": {
+                        "enabled":
+                            False
+                    },
+                },
+
+                timeout=120,
+            )
+
+            if response.status_code >= 400:
+
+                raise RuntimeError(
+                    "OpenRouter Messages API "
+                    f"HTTP {response.status_code}: "
+                    f"{response.text}"
+                )
+
+            data = response.json()
+
+            content_parts = []
+
+            for block in (
+                data.get(
+                    "content",
+                    [],
+                )
+                or []
+            ):
+
+                if (
+                    isinstance(
+                        block,
+                        dict,
+                    )
+                    and block.get(
+                        "type"
+                    ) == "text"
+                ):
+
+                    content_parts.append(
+                        block.get(
+                            "text",
+                            "",
+                        )
+                    )
+
+            content = "".join(
+                content_parts
+            ).strip()
+
+            if not content:
+
+                raise RuntimeError(
+                    "OpenRouter returned no visible text "
+                    f"for {model}. "
+                    f"stop_reason={data.get('stop_reason')!r}; "
+                    f"usage={data.get('usage')!r}; "
+                    f"response_type={data.get('type')!r}"
+                )
+
+            usage = (
+                data.get(
+                    "usage",
+                    {},
+                )
+                or {}
+            )
+
+            prompt_tokens = int(
+                usage.get(
+                    "input_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            completion_tokens = int(
+                usage.get(
+                    "output_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            reasoning_tokens = int(
+                usage.get(
+                    "reasoning_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            total_tokens = (
+                prompt_tokens
+                + completion_tokens
+                + reasoning_tokens
+            )
+
+        elif provider == "anthropic":
+
+            response = client.messages.create(
+                model=model,
+
+                system=system_prompt,
+
+                messages=[
+                    {
+                        "role":
+                            "user",
+
+                        "content":
+                            prompt,
+                    }
+                ],
+
+                temperature=TEMPERATURE,
+
+                max_tokens=MAX_OUTPUT_TOKENS,
+            )
+
+            parts = []
+
+            for block in (
+                getattr(
+                    response,
+                    "content",
+                    [],
+                )
+                or []
+            ):
+
+                if getattr(
+                    block,
+                    "type",
+                    None,
+                ) == "text":
+
+                    parts.append(
+                        getattr(
+                            block,
+                            "text",
+                            "",
+                        )
+                    )
+
+            content = "".join(
+                parts
+            ).strip()
+
+            usage = getattr(
+                response,
+                "usage",
+                None,
+            )
+
+            prompt_tokens = int(
+                getattr(
+                    usage,
+                    "input_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            completion_tokens = int(
+                getattr(
+                    usage,
+                    "output_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            reasoning_tokens = 0
+
+            total_tokens = (
+                prompt_tokens
+                + completion_tokens
+            )
+
+        else:
+
+            request_kwargs = {
+                "model":
+                    model,
+
+                "messages": [
+                    {
+                        "role":
+                            "system",
+
+                        "content":
+                            system_prompt,
+                    },
+
+                    {
+                        "role":
+                            "user",
+
+                        "content":
+                            prompt,
+                    },
+                ],
+
+                "temperature":
+                    TEMPERATURE,
+
+                "max_tokens":
+                    MAX_OUTPUT_TOKENS,
+            }
+
+            if provider == "groq":
+
+                request_kwargs[
+                    "reasoning_effort"
+                ] = REASONING_EFFORT
+
+                request_kwargs[
+                    "include_reasoning"
+                ] = INCLUDE_REASONING
+
+            response = (
+                client
+                .chat
+                .completions
+                .create(
+                    **request_kwargs
+                )
+            )
+
+            choices = getattr(
+                response,
+                "choices",
+                None,
+            )
+
+            if not choices:
+
+                raise RuntimeError(
+                    f"{provider}:{model} returned "
+                    "no completion choices."
+                )
+
+            message = (
+                choices[0]
+                .message
+            )
+
+            content = (
+                getattr(
+                    message,
+                    "content",
+                    None,
+                )
+                or ""
+            ).strip()
+
+            usage = getattr(
+                response,
+                "usage",
+                None,
+            )
+
+            prompt_tokens = int(
+                getattr(
+                    usage,
+                    "prompt_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            completion_tokens = int(
+                getattr(
+                    usage,
+                    "completion_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            total_tokens = int(
+                getattr(
+                    usage,
+                    "total_tokens",
+                    0,
+                )
+                or 0
+            )
+
+            reasoning_tokens = 0
+
+        if not content:
+
+            raise RuntimeError(
+                f"{provider}:{model} returned empty narrative content."
+            )
+
+    except Exception as exc:
+
+        if LLM_DEBUG:
+
+            print(
+                f"[LLM] FAIL provider={provider} "
+                f"model={model}: {exc}"
+            )
+
+        raise
 
     latency_ms = (
         time.perf_counter()
         - start_time
     ) * 1000
 
-    message = (
-        response
-        .choices[0]
-        .message
-    )
-
-    content = (
-        message.content
-        or ""
-    ).strip()
-
-    if not content:
-
-        raise RuntimeError(
-            "Groq returned an empty narrative.\n"
-            "No visible content was returned by the model."
-        )
-
-    # --------------------------------------------------------
-    # Reasoning telemetry
-    # --------------------------------------------------------
-
-    reasoning_tokens = 0
-
-    usage = getattr(
-        response,
-        "usage",
-        None,
-    )
-
-    if usage is not None:
-
-        prompt_tokens = int(
-            getattr(
-                usage,
-                "prompt_tokens",
-                0,
-            )
-            or 0
-        )
-
-        completion_tokens = int(
-            getattr(
-                usage,
-                "completion_tokens",
-                0,
-            )
-            or 0
-        )
-
-        total_tokens = int(
-            getattr(
-                usage,
-                "total_tokens",
-                0,
-            )
-            or 0
-        )
-
-    else:
-
-        prompt_tokens = 0
-
-        completion_tokens = 0
-
-        total_tokens = 0
-
-    # Some SDK/model combinations expose reasoning
-    # separately. If available, capture it.
-
-    if hasattr(
-        message,
-        "reasoning_tokens",
-    ):
-
-        reasoning_tokens = int(
-            getattr(
-                message,
-                "reasoning_tokens",
-                0,
-            )
-            or 0
-        )
-
     estimated_cost = estimate_cost(
         prompt_tokens,
         completion_tokens,
     )
+
+    if LLM_DEBUG:
+
+        print(
+            f"[LLM] SUCCESS provider={provider} "
+            f"model={model} "
+            f"tokens={total_tokens} "
+            f"latency_ms={latency_ms:.0f}"
+        )
 
     return {
         "story":
             content,
 
         "telemetry": {
+            "provider":
+                provider,
+
             "model":
-                MODEL_NAME,
+                model,
 
             "model_purpose":
                 MODEL_PURPOSE,
@@ -741,6 +2047,413 @@ def generate_story(
                 True,
         },
     }
+
+
+def smoke_test_provider(
+    provider=None,
+    model=None,
+):
+    """Direct test for the configured provider/model."""
+
+    selected_provider = (
+        provider or LLM_PROVIDER
+    ).strip().lower()
+
+    selected_model = (
+        model or MODEL_NAME
+    ).strip()
+
+    if selected_provider != "openrouter":
+        raise RuntimeError(
+            "This smoke test is intended for OpenRouter."
+        )
+
+    api_key = os.getenv(
+        "OPENROUTER_API_KEY"
+    )
+
+    if not api_key:
+        raise RuntimeError(
+            "OPENROUTER_API_KEY is not configured."
+        )
+
+    response = requests.post(
+        "https://openrouter.ai/api/v1/messages",
+
+        headers={
+            "Authorization":
+                f"Bearer {api_key}",
+
+            "Content-Type":
+                "application/json",
+
+            "HTTP-Referer":
+                "http://localhost:8501",
+
+            "X-Title":
+                "BusinessIntelligence.ai",
+        },
+
+        json={
+            "model":
+                selected_model,
+
+            "max_tokens":
+                64,
+
+            "temperature":
+                0,
+
+            "messages": [
+                {
+                    "role":
+                        "user",
+
+                    "content":
+                        "Reply with exactly: "
+                        "OPENROUTER_TEST_OK",
+                }
+            ],
+
+            "reasoning": {
+                "enabled":
+                    False
+            },
+        },
+
+        timeout=60,
+    )
+
+    if response.status_code >= 400:
+
+        raise RuntimeError(
+            f"OpenRouter smoke test HTTP "
+            f"{response.status_code}: "
+            f"{response.text}"
+        )
+
+    data = response.json()
+
+    return "".join(
+        block.get(
+            "text",
+            "",
+        )
+        for block in (
+            data.get(
+                "content",
+                [],
+            )
+            or []
+        )
+        if (
+            isinstance(block, dict)
+            and block.get("type") == "text"
+        )
+    ).strip()
+
+
+def clean_generated_narrative(
+    story,
+    persona,
+):
+    """
+    Remove model meta-reasoning and keep only the requested business
+    narrative sections. Incomplete narratives are rejected.
+    """
+
+    if not isinstance(
+        story,
+        str,
+    ):
+        raise RuntimeError(
+            "Generated narrative is not text."
+        )
+
+    story = story.strip()
+
+    if not story:
+        raise RuntimeError(
+            "Generated narrative is empty."
+        )
+
+    if persona == "executive":
+
+        headings = [
+            "HEADLINE",
+            "WHAT CHANGED",
+            "MAIN DRIVER",
+            "WHERE",
+            "CUSTOMER EVIDENCE",
+            "WHAT WE KNOW",
+            "NEXT STEP",
+        ]
+
+    else:
+
+        headings = [
+            "KPI MOVEMENT",
+            "ANALYTICAL DECOMPOSITION",
+            "TOP INVESTIGATION AREAS",
+            "CUSTOMER / REVIEW EVIDENCE",
+            "ACTIONS",
+            "DATA QUALITY",
+        ]
+
+    normalized = story.replace(
+        "\r\n",
+        "\n",
+    )
+
+    heading_re = re.compile(
+        r"(?im)^\s*(?:\*\*|__)?\s*"
+        r"(" +
+        "|".join(
+            re.escape(h)
+            for h in headings
+        ) +
+        r")\s*:?\s*(?:\*\*|__)?\s*$"
+    )
+
+    matches = list(
+        heading_re.finditer(
+            normalized
+        )
+    )
+
+    if not matches:
+
+        raise RuntimeError(
+            f"{persona} narrative contains no required sections."
+        )
+
+    # Ignore all text before the first actual output heading.
+    normalized = normalized[
+        matches[0].start():
+    ]
+
+    matches = list(
+        heading_re.finditer(
+            normalized
+        )
+    )
+
+    sections = []
+
+    for index, match in enumerate(matches):
+
+        title = match.group(1)
+
+        expected_index = None
+
+        for i, heading in enumerate(
+            headings
+        ):
+
+            if heading.lower() == title.lower():
+
+                expected_index = i
+                break
+
+        if expected_index is None:
+            continue
+
+        next_start = (
+            matches[index + 1].start()
+            if index + 1 < len(matches)
+            else len(normalized)
+        )
+
+        body = normalized[
+            match.end():
+            next_start
+        ].strip()
+
+        if body:
+
+            sections.append(
+                f"{headings[expected_index]}:\n{body}"
+            )
+
+    # Require every section in order.
+    found_names = [
+        section.split(
+            ":\n",
+            1
+        )[0]
+        for section in sections
+    ]
+
+    if found_names != headings:
+
+        raise RuntimeError(
+            f"{persona} narrative is incomplete. "
+            f"Expected {headings}; found {found_names}."
+        )
+
+    cleaned = "\n\n".join(
+        sections
+    ).strip()
+
+    forbidden_meta = (
+        "The user wants me",
+        "Let me analyze",
+        "Let's analyze",
+        "Let's parse the evidence",
+        "Thinking Process:",
+        "Constraint Check",
+        "Draft:",
+        "I need to",
+        "I should",
+        "Now I need",
+    )
+
+    lowered = cleaned.lower()
+
+    for phrase in forbidden_meta:
+
+        if phrase.lower() in lowered:
+
+            raise RuntimeError(
+                f"{persona} narrative contains "
+                "model meta-commentary."
+            )
+
+    return cleaned
+
+
+def generate_event_narratives(
+    investigation,
+    validation_feedback=None,
+):
+    """
+    Generate Executive + Operations narratives using the configured
+    primary model and then fallback candidates when the provider/model
+    fails.
+
+    A single selected candidate is used for both personas so that the
+    two narratives come from the same model for one request.
+    """
+
+    load_dotenv()
+
+    event_id = (
+        investigation
+        .get("event", {})
+        .get("event_id")
+    )
+
+    if event_id is None:
+        raise ValueError(
+            "Selected-event investigation is missing event_id."
+        )
+
+    candidates = configured_model_candidates()
+
+    failures = []
+
+    for provider, model in candidates:
+
+        try:
+
+            client = create_provider_client(
+                provider
+            )
+
+            system_prompt = (
+                build_system_prompt()
+            )
+
+            executive = generate_story(
+                client,
+                build_dynamic_executive_prompt(
+                    investigation,
+                    validation_feedback,
+                ),
+                system_prompt,
+                provider=provider,
+                model=model,
+            )
+
+            operations = generate_story(
+                client,
+                build_dynamic_operations_prompt(
+                    investigation,
+                    validation_feedback,
+                ),
+                system_prompt,
+                provider=provider,
+                model=model,
+            )
+
+            executive["story"] = clean_generated_narrative(
+                executive["story"],
+                "executive",
+            )
+
+            operations["story"] = clean_generated_narrative(
+                operations["story"],
+                "operations",
+            )
+
+            return {
+                "event_id":
+                    event_id,
+
+                "executive":
+                    executive,
+
+                "operations":
+                    operations,
+
+                "generated":
+                    True,
+
+                "source":
+                    "selected_event_investigation",
+
+                "model_route": {
+                    "provider":
+                        provider,
+
+                    "model":
+                        model,
+
+                    "fallback_attempts":
+                        len(failures),
+
+                    "previous_failures":
+                        failures,
+                },
+            }
+
+        except Exception as exc:
+
+            error_text = str(exc)
+
+            failures.append(
+                {
+                    "provider":
+                        provider,
+
+                    "model":
+                        model,
+
+                    "error":
+                        error_text,
+                }
+            )
+
+            # Try the next configured candidate.
+            continue
+
+    raise RuntimeError(
+        "All configured LLM candidates failed. "
+        + json.dumps(
+            failures,
+            ensure_ascii=False,
+        )
+    )
 
 
 # ============================================================
@@ -869,18 +2582,6 @@ def main():
 
     load_dotenv()
 
-    api_key = os.getenv(
-        "GROQ_API_KEY"
-    )
-
-    if not api_key:
-
-        raise RuntimeError(
-            "GROQ_API_KEY is not configured.\n\n"
-            "Add it to your .env file:\n"
-            "GROQ_API_KEY=your_key_here"
-        )
-
     # --------------------------------------------------------
     # Load insight
     # --------------------------------------------------------
@@ -888,11 +2589,15 @@ def main():
     insight = load_insight()
 
     # --------------------------------------------------------
-    # Create Groq client
+    # Create configured primary-provider client
     # --------------------------------------------------------
 
-    client = Groq(
-        api_key=api_key
+    primary_provider, primary_model = (
+        configured_model_candidates()[0]
+    )
+
+    client = create_provider_client(
+        primary_provider
     )
 
     system_prompt = (
@@ -913,6 +2618,8 @@ def main():
             insight
         ),
         system_prompt,
+        provider=primary_provider,
+        model=primary_model,
     )
 
     executive_path = save_story(
@@ -940,6 +2647,8 @@ def main():
             insight
         ),
         system_prompt,
+        provider=primary_provider,
+        model=primary_model,
     )
 
     operations_path = save_story(
