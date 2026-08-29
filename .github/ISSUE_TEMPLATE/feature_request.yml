@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest an enhancement for BusinessIntelligence.ai
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing an improvement. Ideas that align with the project's
+        deterministic-first principles are especially welcome.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What gap or friction does this solve? Avoid prescribing a solution here.
+      placeholder: As a <user>, I want <capability> so that <outcome>.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: What should the system do once this is implemented?
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where does this belong?
+      options:
+        - Analytical layer
+        - Evidence / confidence
+        - LLM narrative
+        - Causal analysis
+        - Scenarios / validation
+        - API / Dashboard
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Design guardrails
+      description: Does this respect the project invariants?
+      options:
+        - label: Keeps the analytical layer deterministic (LLM never computes truth)
+        - label: Keeps or strengthens explicit confidence / abstention behavior
+        - label: Supports inspectability (JSON artifacts under `data/`)
+        - label: Avoids new secrets in the repository
+    validations:
+      required: false
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches already evaluated?
+    validations:
+      required: false
