@@ -1,0 +1,81 @@
+name: Bug report
+description: Report a bug so the team can fix it
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report. Please fill in as much detail as you can.
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Which commit or version are you running?
+      placeholder: e.g. main @ 4b07b4d
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the project is affected?
+      options:
+        - Ingestion
+        - Materiality / anomaly
+        - Drivers / decomposition
+        - Evidence / confidence
+        - Actions
+        - NLP / sentiment
+        - Causal analysis
+        - Scenarios / validation
+        - API
+        - Dashboard
+        - Documentation
+        - Pipeline runner
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also tell us what you expected to happen.
+      placeholder: Tell us the observed behavior and the expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands and input. Note any required environment variables.
+      placeholder: |
+        1. python materiality/materiality_engine.py
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, and relevant package versions.
+      placeholder: |
+        Python 3.11.9 on Windows
+        duckdb==1.5.5
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs / output
+      description: Paste error messages or stack traces (scrub any private data).
+      render: shell
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirmations
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I have not included any secrets or API keys
+          required: true

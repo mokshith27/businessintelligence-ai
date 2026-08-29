@@ -8,6 +8,25 @@ The project is designed around one core principle:
 
 **The analytical layer determines the truth; the LLM explains that truth.**
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/status-prototype-orange" alt="Status: prototype">
+</p>
+
+## Documentation & Navigation
+
+- 📖 **Getting Started** → [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first-run guide
+- 🏗️ **Architecture walkthrough** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map
+- 🤝 **Contributing** → [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- 👥 **Authors & credit** → [`AUTHORS.md`](AUTHORS.md)
+- 🗒️ **Changelog** → [`CHANGELOG.md`](CHANGELOG.md)
+- 🛡️ **Code of Conduct** → [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md)
+
+**Maintainers:** [Mokshith](https://github.com/mokshith27) (project lead — core engine),
+Mukesh (co-maintainer — documentation & community), and the third co-maintainer
+(see [`AUTHORS.md`](AUTHORS.md)). Role responsibilities are recorded in
+[`AUTHORS.md`](AUTHORS.md).
+
 ---
 
 ## 1. What the Project Does
