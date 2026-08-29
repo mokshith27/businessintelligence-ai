@@ -22,9 +22,10 @@ The project is designed around one core principle:
 - 🗒️ **Changelog** → [`CHANGELOG.md`](CHANGELOG.md)
 - 🛡️ **Code of Conduct** → [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md)
 
-**Maintainers:** [Mokshith](https://github.com/mokshith27) (project lead — core engine) and
-Mukesh (co-maintainer — documentation & community). Role responsibilities and the team's
-agreed contribution split are recorded in [`AUTHORS.md`](AUTHORS.md).
+**Maintainers:** [Mokshith](https://github.com/mokshith27) (project lead — core engine),
+Mukesh (co-maintainer — documentation & community), and the third co-maintainer
+(see [`AUTHORS.md`](AUTHORS.md)). Role responsibilities are recorded in
+[`AUTHORS.md`](AUTHORS.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # Contributing to BusinessIntelligence.ai
 
-Thanks for considering a contribution. This project is a two-person team effort, and
+Thanks for considering a contribution. This project is a three-person team effort, and
 clear, reviewable contributions keep it healthy.
 
 Please read this guide before opening a pull request.
