@@ -10,6 +10,7 @@ requests==2.34.2
 streamlit==1.62.0
 plotly==7.0.0
 groq==1.7.0
+python-dotenv>=1.0
 transformers==5.16.0
 torch==2.13.0
 sentencepiece==0.2.2

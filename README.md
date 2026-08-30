@@ -1,31 +1,26 @@
 # BusinessIntelligence.ai
 
-> **From KPI movement to evidence-backed action**
+> **From KPI movement to evidence-backed action.**
 
-BusinessIntelligence.ai is an end-to-end decision-intelligence system that detects meaningful business KPI movements, investigates where the change occurred, combines structured and unstructured evidence, estimates confidence, abstains when evidence is insufficient, recommends safe business actions, and generates evidence-grounded narratives for different user roles.
+BusinessIntelligence.ai is an end-to-end **decision-intelligence system** that detects meaningful business KPI movements, investigates *where* the change occurred, combines structured and unstructured evidence, estimates confidence, **abstains when evidence is insufficient**, recommends safe business actions, and generates evidence-grounded narratives for different user roles.
 
 The project is designed around one core principle:
 
-**The analytical layer determines the truth; the LLM explains that truth.**
+> **The analytical layer determines the truth; the LLM explains that truth.**
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
+  <img src="https://img.shields.io/badge/DuckDB-FFF100?logo=duckdb&logoColor=black" alt="DuckDB">
   <img src="https://img.shields.io/badge/status-prototype-orange" alt="Status: prototype">
 </p>
 
-## Documentation & Navigation
+---
 
-- 📖 **Getting Started** → [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first-run guide
-- 🏗️ **Architecture walkthrough** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map
-- 🤝 **Contributing** → [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- 👥 **Authors & credit** → [`AUTHORS.md`](AUTHORS.md)
-- 🗒️ **Changelog** → [`CHANGELOG.md`](CHANGELOG.md)
-- 🛡️ **Code of Conduct** → [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md)
+## 📑 Table of Contents
 
-**Maintainers:** [Mokshith](https://github.com/mokshith27) (project lead — core engine),
-Mukesh (co-maintainer — documentation & community), and the third co-maintainer
-(see [`AUTHORS.md`](AUTHORS.md)). Role responsibilities are recorded in
-[`AUTHORS.md`](AUTHORS.md).
+1. [What the Project Does](#1-what-the-project-does)
 
 ---
 
@@ -59,83 +54,71 @@ Recommended action
 Role-specific narrative
 ```
 
-The system is deliberately conservative. A large percentage movement is not automatically treated as a meaningful business event. Similarly, an observed contributor is not automatically treated as a root cause.
+The system is deliberately conservative:
+
+- A **large percentage movement is not automatically** a meaningful business event.
+- An **observed contributor is not automatically** a root cause.
+- **Insufficient evidence always produces an explicit `ABSTAIN`**, never a confident guess.
 
 ---
 
 ## 2. Key Capabilities
 
-### KPI intelligence
-- KPI semantic contract with metric definition, grain, date field, currency, and governance metadata.
+### 📈 KPI Intelligence
+- KPI semantic contract: metric definition, grain, date field, currency, governance metadata.
 - Daily KPI construction from ecommerce/order data.
 - Seasonal baselines and robust anomaly scoring.
-- Materiality scoring that considers both statistical unusualness and business impact.
+- Materiality scoring combining statistical unusualness **and** business impact.
 - Event clustering for multi-day movements.
 
-### Driver investigation
-- GMV decomposition into order-volume and AOV effects.
+### 🔍 Driver Investigation
+- GMV decomposition into **order-volume** and **AOV** effects.
 - Segment contribution analysis across customer state, category, and seller dimensions.
 - Evidence ranking based on observed contribution.
 
-### Unstructured evidence
+### 💬 Unstructured Evidence
 - Review aspect tagging.
-- Aspect-level sentiment using a multilingual Hugging Face sentiment model.
+- Aspect-level sentiment using a multilingual Hugging Face model.
 - Review evidence comparison between event and comparison periods.
 
-### Evidence and governance
-- Multi-source evidence fusion.
-- Explicit confidence scores.
+### 🧾 Evidence & Governance
+- Multi-source evidence fusion with explicit confidence scores.
 - `ABSTAIN`, `WEAK`, and `CONTRADICTED` states.
-- Safe action rules that prevent high-impact interventions when evidence is insufficient.
+- Safe action rules that block high-impact interventions on insufficient evidence.
 - Analytical lineage and LLM governance metadata.
 
-### Causal analysis
-- Observational causal analysis of:
-  `late_delivery → review_score`
-- Propensity adjustment.
-- Doubly robust AIPW estimation.
-- Bootstrap uncertainty interval.
-- Propensity overlap and basic balance diagnostics.
-- Explicit causal assumptions and limitations.
-- Production status that can downgrade causal evidence when diagnostics are poor.
+### 🧪 Causal Analysis
+- Observational causal analysis of `late_delivery → review_score`.
+- Propensity adjustment and **doubly robust AIPW estimation**.
+- Bootstrap uncertainty interval; propensity overlap and balance diagnostics.
+- Explicit causal assumptions and limitations, with a production status that can downgrade poor-quality causal evidence.
 
-### LLM narrative generation
-- Executive narrative.
-- Operations narrative.
-- Evidence-grounded prompts.
-- Quantitative values taken from the deterministic analytical layer.
-- Narrative validator checks numbers, statuses, uncertainty, currency, causal wording, and driver claims.
-- LLM telemetry including latency, token usage, model calls, and estimated cost.
+### 🤖 LLM Narrative Generation
+- Executive and Operations narratives from evidence-grounded prompts.
+- All quantitative values come from the deterministic analytical layer.
+- A narrative validator checks numbers, statuses, uncertainty, currency, causal wording, and driver claims.
+- LLM telemetry: latency, token usage, model calls, estimated cost.
 
-### Scenario testing
-- Controlled promotion scenario.
-- Inventory-constraint scenario.
-- Contradictory/ambiguous cases.
-- Sparse-history/new-KPI scenario.
+### 🎯 Scenario Testing
+- Controlled promotion and inventory-constraint scenarios.
+- Contradictory/ambiguous and sparse-history cases.
 - Scenario scorecard for driver identification and action safety.
 
-### Role-based access
-Three application-level views:
-
+### 👥 Role-Based Access
 | Role | Purpose |
 |---|---|
-| Executive | High-level KPI movement, contribution, confidence, and decisions |
-| Operations | Operational drivers, actions, owners, and monitoring |
-| Analyst | Full evidence, lineage, causal evidence, governance, and feedback |
+| **Executive** | High-level KPI movement, contribution, confidence, decisions |
+| **Operations** | Operational drivers, actions, owners, monitoring |
+| **Analyst** | Full evidence, lineage, causal evidence, governance, feedback |
 
 The prototype uses application-level filtering rather than enterprise SSO/JWT/RBAC infrastructure.
 
-### Human-in-the-loop feedback
-Analysts can classify an assessment as:
-- `CORRECT`
-- `INCORRECT`
-- `MISSING_CONTEXT`
-
-Feedback is stored and used to measure calibration. The system intentionally does not overwrite production confidence from a tiny feedback sample.
+### 🔁 Human-in-the-Loop Feedback
+Analysts classify an assessment as `CORRECT`, `INCORRECT`, or `MISSING_CONTEXT`. Feedback is stored as measurable calibration evidence — the system intentionally does **not** overwrite production confidence from a tiny sample.
 
 ---
 
-## 3. Architecture
+## 3. System Architecture
 
 ```text
                          ┌─────────────────────┐
@@ -151,8 +134,8 @@ Feedback is stored and used to measure calibration. The system intentionally doe
                                     │
                                     ▼
                  ┌──────────────────────────────────┐
-                 │     KPI / Analytical Layer        │
-                 │ daily KPIs + enriched facts       │
+                 │     KPI / Analytical Layer       │
+                 │ daily KPIs + enriched facts      │
                  └────────────────┬─────────────────┘
                                   │
                   ┌───────────────┼────────────────┐
@@ -175,386 +158,473 @@ Feedback is stored and used to measure calibration. The system intentionally doe
                       └─────────────┼──────────────┘
                                     ▼
                          ┌─────────────────────┐
-                         │   Insight Builder   │
+                         │ Canonical Insight   │
+                         └──────────┬──────────┘
+                                    ▼
+                         ┌─────────────────────┐
+                         │  LLM Narratives     │
+                         │  + validation       │
                          └──────────┬──────────┘
                                     │
-                         ┌──────────▼──────────┐
-                         │  LLM Story Generator│
-                         └──────────┬──────────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │ Narrative Validator │
-                         └──────────┬──────────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │      FastAPI        │
-                         └──────────┬──────────┘
-                                    │
-                         ┌──────────▼──────────┐
-                         │     Streamlit       │
-                         │   Decision UI       │
-                         └─────────────────────┘
+                         ┌──────────┴──────────┐
+                         ▼                     ▼
+                  ┌─────────────┐       ┌─────────────┐
+                  │  FastAPI    │       │  Streamlit  │
+                  │  (serving)  │       │ (dashboard) │
+                  └─────────────┘       └─────────────┘
 ```
 
 ---
 
-## 4. Repository Structure
+## 4. Tech Stack
+
+| Layer | Technology | Purpose |
+|---|---|---|
+| Warehouse | **DuckDB** | In-process analytical database for all KPI/segment tables |
+| Data processing | **pandas**, **NumPy**, **SciPy** | KPI construction, decomposition, statistics |
+| Machine learning | **scikit-learn** | Clustering, propensity models |
+| NLP / sentiment | **Hugging Face Transformers**, **PyTorch**, **SentencePiece** | Multilingual aspect-level review sentiment |
+| LLM narratives | **Groq SDK** (+ OpenRouter fallback) | Evidence-grounded story generation |
+| API | **FastAPI**, **Uvicorn**, **Pydantic** | Insight/action/feedback serving layer |
+| Dashboard | **Streamlit**, **Plotly** | Role-based decision workspace |
+| Configuration | **python-dotenv** | `.env`-based secret & LLM configuration |
+
+---
+
+## 5. Project Structure
 
 ```text
 businessintelligence-ai/
+├── run_pipeline.py            # Orchestrates the full analytical pipeline
+├── requirements.txt           # Pinned Python dependencies
+├── .env.example               # Safe env-var template (commit this)
+├── .env                       # Your real secrets (NEVER commit — git-ignored)
 │
-├── data/
-│   ├── raw/
-│   │   ├── olist/
-│   │   └── funnel/
-│   ├── simulated/
-│   │   └── business_context.csv
-│   ├── insights/
-│   ├── scenarios/
-│   ├── causal/
-│   └── feedback/
-│
-├── config/
-│   └── kpi_contracts/
-│
-├── ingestion/
-│   ├── load_and_build_kpis.py
-│   ├── build_analytical_tables.py
-│   ├── build_daily_kpis.py
-│   ├── inspect_database.py
-│   └── validate_relationships.py
-│
-├── materiality/
-│   ├── materiality_engine.py
-│   ├── event_clustering.py
-│   └── inspect_gmv_tail.py
-│
-├── anomaly/
-│   ├── seasonal_baseline.py    # documented extension point
-│   └── changepoints.py         # optional extension
-│
-├── drivers/
-│   ├── decomposition.py        # production
-│   ├── segment_contribution.py  # production
-│   ├── segment_tables.py
-│   ├── check_decomposition.py
-│   └── shap_attribution.py      # optional extension
-│
-├── nlp/
-│   ├── aspect_tagging.py
-│   └── sentiment.py
-│
-├── evidence/
-│   ├── evidence_graph.py
-│   ├── confidence.py
-│   ├── review_evidence.py
-│   ├── build_insight.py
-│   ├── causal_evidence.py
-│   └── causal_status.py
-│
-├── causal/
-│   ├── delivery_review_effect.py
-│   └── diagnostics.py
-│
-├── actions/
-│   └── action_engine.py
-│
-├── personas/
-│   ├── executive.py
-│   ├── operations.py
-│   └── test_personas.py
-│
-├── llm/
-│   ├── story_generator.py
-│   └── narrative_validator.py
-│
-├── scenarios/
-│   ├── scenario_runner.py
-│   ├── scenario_evaluation.py
-│   ├── scenario_engine.py
-│   ├── engine_evaluation.py
-│   ├── evaluation_scorecard.py
-│   └── sparse_history_scenario.py
-│
-├── security/
-│   └── role_filter.py
-│
-├── feedback/
-│   └── capture_and_calibrate.py
-│
-├── telemetry/
-│   └── track.py     # extension point; LLM telemetry is in story_generator.py
-│
-├── api/
-│   └── main.py
-│
-├── dashboard/
-│   └── app.py
-│
-├── requirements.txt
-├── .gitignore
-└── README.md
+├── ingestion/                 # Raw data → DuckDB warehouse, KPI & analytical tables
+├── anomaly/                   # Seasonal baselines, robust anomaly scoring, changepoints
+├── materiality/               # Materiality engine + multi-day event clustering
+├── drivers/                   # GMV decomposition, segment tables, contribution, investigation
+├── nlp/                       # Review aspect tagging + aspect-level sentiment
+├── evidence/                  # Evidence graph, review evidence, confidence, insight build
+├── actions/                   # Safe action recommendation engine
+├── causal/                    # AIPW causal estimation, diagnostics, causal evidence
+├── scenarios/                 # Controlled scenario engine, sparse-history, evaluation
+├── feedback/                  # Analyst feedback capture + calibration
+├── security/                  # Role-based information filtering
+├── personas/                  # Executive / Operations persona builders + tests
+├── llm/                       # Story generator + narrative validator (Groq/OpenRouter)
+├── telemetry/                 # Runtime & LLM usage telemetry
+├── config/                    # KPI contracts + llm_config.yaml
+├── api/                       # FastAPI application (api/main.py)
+├── dashboard/                 # Streamlit application (dashboard/app.py)
+├── docs/                      # GETTING_STARTED.md, ARCHITECTURE.md
+└── data/
+    ├── raw/                   # Input CSVs (Olist + simulated business context)
+    │   ├── olist/             # Orders, items, payments, reviews, customers, sellers…
+    │   ├── funnel/            # Closed deals + marketing qualified leads
+    │   └── simulated/         # business_context.csv
+    ├── warehouse/             # businessintelligence.duckdb (generated)
+    ├── insights/              # latest_insight.json + persona stories & validations
+    ├── causal/                # Causal effect, diagnostics, evidence, production status
+    ├── scenarios/             # Scenario evaluation outputs
+    └── feedback/              # Feedback records + calibration report
 ```
 
-> The exact generated-data contents under `data/` depend on whether the pipeline has already been executed in a particular checkout.
-
 ---
 
-## 5. Technology Stack
+## 6. Getting Started — Step by Step
 
-| Layer | Technology |
+Follow these steps in order. Every command assumes **Windows PowerShell** from the repository root (adjust for macOS/Linux where noted).
+
+### Step 0 — Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Python | **3.10+** | 3.11/3.12 recommended |
+| pip | latest | ships with Python |
+| Git | any recent | to clone the repository |
+| LLM API key | Groq and/or OpenRouter | required only for narrative generation |
+| Disk | ~4 GB | PyTorch + Transformers models are large |
+| OS | Windows / macOS / Linux | primary development target is Windows |
+
+### Step 1 — Clone the repository
+
+```powershell
+git clone https://github.com/mokshith27/businessintelligence-ai.git
+cd businessintelligence-ai
+```
+
+### Step 2 — Create and activate a virtual environment
+
+```powershell
+# Windows PowerShell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### Step 3 — Install dependencies
+
+```powershell
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+> The sentiment engine needs `sentencepiece` and `protobuf` (already pinned in `requirements.txt`). If the tokenizer still fails, run: `python -m pip install sentencepiece protobuf` and restart the environment.
+
+### Step 4 — Configure environment variables (`.env`)
+
+All secrets and LLM settings live in a `.env` file at the project root.
+The loader (`llm/story_generator.py`) reads it automatically via `python-dotenv` (`load_dotenv()`).
+
+**Option A — from the template (recommended):**
+
+```powershell
+Copy-Item .env.example .env
+# then open .env and fill in your real API keys
+```
+
+**Option B — create it manually:** create a file named `.env` in the project root:
+
+```dotenv
+# ---- Primary LLM ----
+LLM_PROVIDER=groq
+LLM_MODEL=openai/gpt-oss-120b
+
+# ---- Fallback models (provider:model,comma-separated) ----
+LLM_FALLBACKS=openrouter:openrouter/free
+
+# ---- API keys ----
+GROQ_API_KEY=your_groq_api_key_here
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+
+# ---- Generation settings ----
+LLM_MAX_OUTPUT_TOKENS=800
+LLM_TEMPERATURE=0.1
+LLM_REASONING_EFFORT=low
+LLM_DEBUG=true
+```
+
+> 🔐 **Security:** `.env` is listed in `.gitignore` and must **never** be committed. A committed `.env.example` with placeholder values is the safe template. If a real key ever leaks (commit, screenshot, chat), **rotate it immediately** in the provider console.
+
+The full variable-by-variable reference is in [Section 7](#7-environment-variables-reference-env).
+
+### Step 5 — Data setup
+
+The pipeline reads raw CSVs from `data/raw/`:
+
+```text
+data/raw/olist/       → orders, order_items, order_payments, order_reviews,
+                        customers, sellers, products, geolocation, category translation
+data/raw/funnel/      → closed deals, marketing qualified leads
+data/raw/simulated/   → business_context.csv
+```
+
+A fresh clone includes these files. If you removed them, restore the Olist e-commerce dataset (public Kaggle dataset) into `data/raw/olist/` before running the pipeline.
+
+### Step 6 — Run the analytical pipeline
+
+This is the **one command** that builds every analytical artifact end-to-end:
+
+```powershell
+python run_pipeline.py
+```
+
+The runner validates all 21 scripts up front, executes them in dependency order with UTF-8 safe settings on Windows, prints per-step timings, and fails fast (non-zero exit) if any step fails. See [Section 8](#8-the-analytical-pipeline) for the exact stage list.
+
+Expected completion markers:
+
+```text
+[OK] All pipeline files exist.
+...
+FULL PIPELINE COMPLETE
+Total execution time: ... seconds
+Steps completed: 21/21
+  data/insights/latest_insight.json
+  [OK] data/insights/executive_story.json
+  [OK] data/insights/operations_story.json
+```
+
+### Step 7 — Start the API (terminal 1)
+
+```powershell
+uvicorn api.main:app --reload
+```
+
+- Swagger UI: `http://127.0.0.1:8000/docs`
+- ReDoc: `http://127.0.0.1:8000/redoc`
+
+### Step 8 — Start the dashboard (terminal 2)
+
+```powershell
+streamlit run dashboard/app.py
+```
+
+Dashboard: `http://localhost:8501`
+
+### Step 9 — Verify the installation
+
+| Check | How |
 |---|---|
-| Language | Python |
-| Analytical database | DuckDB |
-| Data processing | Pandas, NumPy |
-| Machine learning | scikit-learn |
-| NLP | Hugging Face Transformers |
-| Deep-learning runtime for sentiment model | PyTorch |
-| API | FastAPI |
-| Dashboard | Streamlit |
-| Visualization | Plotly |
-| LLM | Groq API |
-| LLM model used in the final run | `openai/gpt-oss-120b` |
-| Storage/artifacts | Local files + DuckDB |
-| Version control | Git / GitHub |
+| Warehouse built | `data/warehouse/businessintelligence.duckdb` exists |
+| Canonical insight | `data/insights/latest_insight.json` exists |
+| Narratives generated | `data/insights/executive_story.json`, `operations_story.json` exist |
+| API healthy | `GET http://127.0.0.1:8000/api/insights/latest` returns JSON |
+| Dashboard loads | Role selector + KPI snapshot render at `localhost:8501` |
+| LLM configured | `GET http://127.0.0.1:8000/api/security/test` and telemetry show `groq_key_configured: true` |
+
+### Quick-start recap
+
+```powershell
+git clone https://github.com/mokshith27/businessintelligence-ai.git
+cd businessintelligence-ai
+python -m venv .venv; .\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env        # then add your API keys
+python run_pipeline.py             # build all artifacts
+uvicorn api.main:app --reload      # terminal 1
+streamlit run dashboard/app.py     # terminal 2
+```
 
 ---
 
-## 6. Data Sources
+## 7. Environment Variables Reference (`.env`)
 
-The project uses heterogeneous data sources centered on ecommerce operations.
+All variables are optional at the code level (safe defaults exist), but **an LLM API key is required** for narrative generation. Values are loaded once at module import via `load_dotenv()` in `llm/story_generator.py`; real values should live only in the local `.env` file.
 
-### Structured commerce data
-Olist-style datasets provide:
-- orders
-- order items
-- customers
-- sellers
-- products
-- order reviews
+### Provider & model selection
 
-### Business context
-A simulated context dataset provides controlled scenarios such as:
-- promotions
-- inventory constraints
-- marketing campaigns
-- competitor pricing
-- external events
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_PROVIDER` | `groq` | Primary narrative provider. Supported: `groq`, `openrouter`, `openai`, `anthropic`. Lowercased and trimmed automatically. |
+| `LLM_MODEL` | `openai/gpt-oss-120b` | Model identifier for the primary provider. |
+| `LLM_FALLBACKS` | `openrouter:openrouter/free` | Comma-separated `provider:model` candidates tried in order if the primary model fails. Example: `openrouter:openrouter/free,openai:gpt-4o-mini`. |
 
-This context dataset is specifically used to validate whether the engine can align business context with observed KPI movement.
+### API keys
 
-### Unstructured data
-Customer reviews are used as the unstructured evidence source.
+| Variable | Required when | Where to get it |
+|---|---|---|
+| `GROQ_API_KEY` | `LLM_PROVIDER=groq` or a `groq:` fallback | https://console.groq.com/keys |
+| `OPENROUTER_API_KEY` | `LLM_PROVIDER=openrouter` or an `openrouter:` fallback | https://openrouter.ai/keys |
+| `OPENAI_API_KEY` | `LLM_PROVIDER=openai` or an `openai:` fallback | https://platform.openai.com/api-keys |
+| `ANTHROPIC_API_KEY` | `LLM_PROVIDER=anthropic` or an `anthropic:` fallback | https://console.anthropic.com |
+
+The telemetry/health check reports only *whether* each key is configured (`groq_key_configured: true`), never the key itself.
+
+### Generation settings
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_MAX_OUTPUT_TOKENS` | `800` | Maximum tokens per generated narrative. |
+| `LLM_TEMPERATURE` | `0.1` | Sampling temperature. Low values keep narratives deterministic and reproducible. |
+| `LLM_REASONING_EFFORT` | `low` | Reasoning-effort hint for models that support it: `low`, `medium`, `high`. |
+| `LLM_DEBUG` | `true` | Verbose LLM debug logging. Accepts `1`, `true`, `yes`, `on`. |
+
+### Runtime (set by the pipeline runner)
+
+| Variable | Set by | Purpose |
+|---|---|---|
+| `PYTHONUTF8=1` | `run_pipeline.py` | Forces UTF-8 mode to avoid Windows `cp1252` Unicode errors. |
+| `PYTHONIOENCODING=utf-8` | `run_pipeline.py` | Same, for stdout/stderr streams. |
+
+### Security rules for `.env`
+
+1. `.gitignore` already excludes `.env` / `.env.*` and whitelists `!.env.example` — keep it that way.
+2. Commit only `.env.example` (placeholders, no real values).
+3. Never paste real keys into issues, PRs, screenshots, or chat tools.
+4. Rotate any key that may have been exposed — rotation is instant in the provider console.
+5. For CI, inject keys as repository secrets instead of files.
 
 ---
 
-## 7. KPI Semantic Contract
+## 8. The Analytical Pipeline
 
-The primary KPI is:
+`python run_pipeline.py` executes **21 scripts in strict dependency order** (validated before the first step runs; the runner aborts on the first failure and reports per-step timing):
+
+| # | Stage | Script | What it produces |
+|---|---|---|---|
+| 1 | Load raw data & build KPIs | `ingestion/load_and_build_kpis.py` | Initial KPI tables from raw CSVs |
+| 2 | Validate relationships | `ingestion/validate_relationships.py` | Referential-integrity checks |
+| 3 | Build analytical tables | `ingestion/build_analytical_tables.py` | Enriched analytical facts |
+| 4 | Build daily KPI mart | `ingestion/build_daily_kpis.py` | Daily KPI series |
+| 5 | Load business context | `ingestion/load_business_context.py` | Business-context tables |
+| 6 | Build segment KPI tables | `drivers/segment_tables.py` | Segment-level KPIs |
+| 7 | GMV decomposition | `drivers/decomposition.py` | Volume vs. AOV effects |
+| 8 | Validate decomposition | `drivers/check_decomposition.py` | Decomposition reconciliation |
+| 9 | Driver contribution analysis | `drivers/segment_contribution.py` | Ranked segment contributions |
+| 10 | GMV materiality analysis | `materiality/materiality_engine.py` | Materiality scores |
+| 11 | Event clustering | `materiality/event_clustering.py` | Multi-day events |
+| 12 | Event driver investigation | `drivers/event_investigation.py` | Per-event driver evidence |
+| 13 | Review aspect tagging | `nlp/aspect_tagging.py` | Tagged review aspects |
+| 14 | Review sentiment analysis | `nlp/sentiment.py` | Aspect-level sentiment |
+| 15 | Build evidence foundation | `evidence/evidence_graph.py` | Multi-source evidence graph |
+| 16 | Build review evidence | `evidence/review_evidence.py` | Event-vs-baseline review evidence |
+| 17 | Confidence & abstention | `evidence/confidence.py` | Confidence scores, `ABSTAIN`/`WEAK`/`CONTRADICTED` |
+| 18 | Generate recommended actions | `actions/action_engine.py` | Evidence-gated safe actions |
+| 19 | Build canonical insight | `evidence/build_insight.py` | `latest_insight.json` + LLM policy |
+| 20 | Build & test personas | `personas/test_personas.py` | Executive/Operations persona views |
+| 21 | LLM narratives + validation | `llm/story_generator.py`, `llm/narrative_validator.py` | Persona stories, validated claims, telemetry |
+
+> **Development tip:** when debugging a single layer, run its module directly instead of rebuilding the whole pipeline.
+
+---
+
+## 9. Generated Artifacts
+
+The most useful outputs (all generated locally by the pipeline):
+
+```text
+data/insights/latest_insight.json                # Canonical insight (single source of truth)
+data/insights/executive_story.json               # Executive narrative
+data/insights/operations_story.json              # Operations narrative
+data/insights/executive_validation.json          # Executive narrative validation
+data/insights/operations_validation.json         # Operations narrative validation
+
+data/causal/delivery_review_causal_effect.json   # Late-delivery → review-score estimate
+data/causal/causal_diagnostics.json              # Overlap/balance diagnostics
+data/causal/causal_evidence_record.json          # Causal evidence record
+data/causal/causal_production_status.json        # Production status (may downgrade evidence)
+
+data/scenarios/scenario_evaluation.json          # Controlled scenario scorecard
+data/scenarios/scenario_engine_results.json      # Per-scenario engine results
+data/scenarios/engine_evaluation.json            # Engine-level evaluation
+data/scenarios/sparse_history_scenario.json      # Sparse-history ABSTAIN check
+
+data/feedback/feedback_records.json              # Analyst feedback
+data/feedback/calibration_report.json            # Feedback calibration
+
+data/warehouse/businessintelligence.duckdb       # DuckDB analytical warehouse
+```
+
+These artifacts make the analytical process **inspectable and reproducible**. They are not expected to exist in a fresh clone until the pipeline runs.
+
+---
+
+## 10. API Reference
+
+Start FastAPI from the project root:
+
+```powershell
+uvicorn api.main:app --reload
+```
+
+Interactive Swagger UI: `http://127.0.0.1:8000/docs`
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/insights/latest` | Canonical insight |
+| `GET` | `/api/insights/latest/executive` | Executive view of latest insight |
+| `GET` | `/api/insights/latest/operations` | Operations view of latest insight |
+| `GET` | `/api/insights/role?role=executive\|operations\|analyst` | Role-filtered insight |
+| `GET` | `/api/actions` | Recommended actions |
+| `GET` | `/api/events` | Detected KPI events |
+| `POST` | `/api/feedback` | Submit analyst feedback |
+| `GET` | `/api/feedback` | List feedback records |
+| `GET` | `/api/calibration` | Feedback calibration report |
+| `GET` | `/api/security/test` | Role-filtering behavior checks |
+| `GET` | `/api/validation/scenarios` | Controlled scenario results |
+| `GET` | `/api/validation/sparse-history` | Sparse-history ABSTAIN check |
+| `GET` | `/api/validation/causal` | Causal evidence & diagnostics |
+| `GET` | `/api/validation/feedback` | Feedback validation data |
+
+---
+
+## 11. Dashboard
+
+```powershell
+streamlit run dashboard/app.py
+```
+
+Available at `http://localhost:8501`. The dashboard provides:
+
+- Role selection (Executive / Operations / Analyst);
+- KPI snapshot and event information;
+- GMV decomposition and driver investigation;
+- Recommended actions;
+- Evidence, governance, analytical lineage, and LLM governance panels;
+- Runtime telemetry and event history;
+- Analyst feedback capture and feedback calibration;
+- Validation center (scenarios, sparse history, causal).
+
+---
+
+## 12. LLM Layer & Narrative Governance
+
+The story generator (`llm/story_generator.py`) uses an OpenAI-compatible Groq endpoint (with OpenRouter fallback) and records telemetry such as:
 
 ```json
 {
-  "id": "marketplace_gmv",
-  "name": "Marketplace GMV",
-  "grain": "order_item",
-  "primary_date": "order_purchase_timestamp",
-  "currency": "BRL",
-  "currency_symbol": "R$"
+  "model": "openai/gpt-oss-120b",
+  "prompt_tokens": 1279,
+  "completion_tokens": 443,
+  "total_tokens": 1722,
+  "model_calls": 1,
+  "estimated_cost_usd": 0.00045765
 }
 ```
 
-The semantic contract separates metric definition from narrative generation and provides a governed source for KPI interpretation.
+Governance rules enforced by design:
 
----
+- The LLM receives **only deterministic analytical values** — it never computes business numbers.
+- `llm/narrative_validator.py` checks every narrative for correct numbers, statuses, uncertainty language, currency, causal wording, and driver claims.
+- The canonical insight embeds an explicit **LLM policy** (`allowed_llm_tasks` / `forbidden_llm_tasks`).
+- Configuration is exposed through `get_llm_configuration()`, which reports key presence but **never returns key values**.
 
-## 8. Core Analytical Flow
-
-### Step 1 — Ingestion
-
-Raw CSV data is loaded and analytical tables are built in DuckDB.
-
-Example:
+To regenerate narratives manually:
 
 ```powershell
-python ingestion/load_and_build_kpis.py
+python llm/story_generator.py
 ```
-
-### Step 2 — Materiality
-
-The engine compares the observed KPI against an appropriate historical baseline.
-
-Conceptually:
-
-```text
-Materiality
-    =
-Statistical unusualness
-    ×
-Business impact
-```
-
-The engine also considers sparse history so a newly launched KPI is not incorrectly labeled as a reliable anomaly.
-
-### Step 3 — Event clustering
-
-Adjacent anomalous observations are combined into business events.
-
-Example:
-
-```text
-2017-11-23 → 2017-11-29
-7 anomalous days
-```
-
-### Step 4 — Driver analysis
-
-GMV is decomposed into:
-
-```text
-GMV change
-  ├── Order-volume effect
-  └── AOV effect
-```
-
-The engine then analyzes contribution by dimensions such as customer state and category.
-
-### Step 5 — Evidence fusion
-
-Evidence can include:
-
-```text
-Observed contribution
-Review evidence
-Sentiment
-Business context
-Causal evidence
-Data quality
-```
-
-The system keeps evidence types explicit rather than allowing a single model to fabricate a root cause.
-
-### Step 6 — Confidence and abstention
-
-Examples of states:
-
-```text
-SUPPORTED
-WEAK
-ABSTAIN
-CONTRADICTED
-WEAK_DRIVER
-```
-
-The decision layer is designed so insufficient evidence can lead to:
-
-```text
-ABSTAIN
-```
-
-instead of an unsupported operational intervention.
-
-### Step 7 — Action generation
-
-The action layer follows:
-
-```text
-Driver
-  ↓
-Controllable lever
-  ↓
-Action
-  ↓
-Owner
-  ↓
-Monitoring plan
-```
-
-### Step 8 — Narrative synthesis
-
-Only after the deterministic analysis is complete does the LLM receive the governed evidence.
-
-The LLM is used for:
-- narrative synthesis
-- persona adaptation
-- natural-language explanation
-- uncertainty wording
-
-The LLM is not used as the source of truth for KPI calculations.
-
-### Step 9 — Validation
-
-Generated narratives are checked for:
-- unsupported numbers
-- incorrect statuses
-- missing uncertainty language
-- wrong currency notation
-- unsupported causal claims
-- unsupported driver claims
 
 ---
 
-## 9. Example Final Insight
+## 13. NLP / Sentiment Layer
 
-For the demonstrated November 2017 GMV event:
-
-```text
-Previous GMV   : R$204,230.43
-Current GMV    : R$439,250.34
-GMV change     : R$235,019.91
-
-Previous orders: 1,367
-Current orders : 3,424
-
-Previous AOV   : R$149.40
-Current AOV    : R$128.29
-
-Volume effect  : R$285,600.25
-AOV effect     : -R$50,580.34
-```
-
-The largest observed contributor was:
+The sentiment engine uses the multilingual Hugging Face model:
 
 ```text
-SP customer state
-GMV contribution: R$79,092.21
-Contribution: 33.65%
-Evidence status: WEAK
-Decision: INVESTIGATE
+cardiffnlp/twitter-xlm-roberta-base-sentiment
 ```
 
-The system deliberately does **not** claim that SP is a verified root cause.
+Pipeline flow:
+
+```text
+Reviews → aspect tagging (nlp/aspect_tagging.py)
+        → aspect-level sentiment (nlp/sentiment.py)
+        → event-vs-comparison-period review evidence (evidence/review_evidence.py)
+```
+
+If SentencePiece/protobuf errors appear, install the tokenizer dependencies and restart:
+
+```powershell
+python -m pip install sentencepiece protobuf
+```
 
 ---
 
-## 10. Causal Inference
+## 14. Causal Analysis
 
-The project contains a separate observational causal module:
+The causal module performs observational causal analysis of `late_delivery → review_score`:
 
-```text
-Late delivery
-      ↓
-Review score
-```
+- Propensity adjustment with **doubly robust AIPW estimation**.
+- Bootstrap uncertainty interval.
+- Propensity overlap and basic covariate-balance diagnostics.
+- Explicit causal assumptions and limitations.
+- A production status that can **downgrade causal evidence** when diagnostics are poor.
 
-The final demonstrated estimate was:
-
-```text
-ATE                  : -1.5703
-95% bootstrap CI     : [-1.5853, -1.5536]
-Propensity overlap   : acceptable
-Production status    : CAUSAL_EVIDENCE_ACCEPTED
-Confidence           : 0.80
-```
-
-Interpretation:
+Example estimate:
 
 > Under the observational adjustment assumptions, late delivery is estimated to reduce review score by approximately 1.57 points.
 
 ### Important limitation
 
-This is **observational causal inference**, not a randomized experiment.
+This is **observational causal inference**, not a randomized experiment. The result depends on assumptions including:
 
-The result depends on assumptions including:
 - no important unmeasured confounding after adjustment;
 - adequate treatment/control overlap;
 - correct treatment definition;
@@ -564,7 +634,7 @@ The system therefore exposes causal assumptions, diagnostics, and limitations in
 
 ---
 
-## 11. Sparse-History Safety
+## 15. Sparse-History Safety
 
 A controlled scenario simulates a newly launched KPI:
 
@@ -579,7 +649,7 @@ Decision             : ABSTAIN
 Confidence           : 0.050
 ```
 
-The important behavior is:
+The important behavior:
 
 ```text
 Large movement
@@ -593,14 +663,10 @@ This prevents the engine from confusing early-stage volatility with a trustworth
 
 ---
 
-## 12. Controlled Scenario Evaluation
-
-The controlled scenario suite contains:
+## 16. Controlled Scenario Evaluation
 
 ### SCN_001 — Promotion-driven movement
-The scenario includes promotion context, but the observed mechanism conflicts with the expected positive direction.
-
-Result:
+Promotion context is present, but the observed mechanism conflicts with the expected positive direction.
 
 ```text
 Top driver : promotion
@@ -610,9 +676,7 @@ Safety     : PASS
 ```
 
 ### SCN_002 — Inventory constraint
-The context indicates constrained inventory and the observed GMV direction is negative, but the order mechanism is not fully consistent.
-
-Result:
+Context indicates constrained inventory and negative GMV, but the order mechanism is not fully consistent.
 
 ```text
 Top driver : inventory_constraint
@@ -624,8 +688,6 @@ Safety     : PASS
 ### SCN_003 — Promotion-driven movement 2
 Promotion context aligns with positive GMV and positive order growth.
 
-Result:
-
 ```text
 Top driver : promotion
 Status     : SUPPORTED
@@ -633,385 +695,134 @@ Action     : ACTION_WITH_VALIDATION
 Safety     : PASS
 ```
 
-The final scorecard reached:
+Final scorecard:
 
 ```text
 Driver identification : 100%
-Context alignment      : 100%
-Status handling        : 100%
-Safe abstention        : 100%
-Action safety          : 100%
-Action acceptability   : 100%
-Average score          : 1.000
+Context alignment     : 100%
+Status handling       : 100%
+Safe abstention       : 100%
+Action safety         : 100%
+Action acceptability  : 100%
+Average score         : 1.000
 ```
 
 ---
 
-## 13. Role-Based Security
+## 17. Role-Based Security
 
-The prototype implements application-level information filtering.
+The prototype implements application-level information filtering (not enterprise SSO/JWT/RBAC).
 
 ### Executive
-
-Receives:
-- KPI
-- movement
-- event
-- top drivers
-- confidence
-- actions
-- executive narrative
-
-Restricted:
-- customer identifiers
-- seller identifiers
-- direct contact fields
-- detailed analyst-only lineage/causal information
+- **Receives:** KPI, movement, event, top drivers, confidence, actions, executive narrative.
+- **Restricted:** customer/seller identifiers, direct contact fields, analyst-only lineage and causal detail.
 
 ### Operations
-
-Receives:
-- KPI
-- event
-- drivers
-- confidence
-- operational actions
-- operations narrative
-
-Customer contact fields remain restricted.
+- **Receives:** KPI, event, drivers, confidence, operational actions, operations narrative.
+- **Restricted:** customer contact fields.
 
 ### Analyst
+- **Receives:** full driver evidence, confidence, actions, data quality, lineage, causal evidence, LLM governance, and both narratives.
+- **Restricted:** PII such as email, phone, and address in all cases.
 
-Receives:
-- full driver evidence
-- confidence
-- actions
-- data quality
-- lineage
-- causal evidence
-- LLM governance
-- executive and operations narratives
-
-PII such as email, phone, and address remains restricted.
-
-> This is a prototype entitlement layer, not a production identity/authentication system.
+Filtering is implemented in `security/role_filter.py` and exposed through `/api/insights/role`.
 
 ---
 
-## 14. Human-in-the-Loop Feedback
+## 18. Human-in-the-Loop Feedback
 
-Analysts can evaluate an insight directly from the dashboard.
-
-Available feedback:
+Analysts evaluate an insight directly from the dashboard:
 
 ```text
-CORRECT
-INCORRECT
-MISSING_CONTEXT
+CORRECT | INCORRECT | MISSING_CONTEXT
 ```
 
-Feedback is stored in:
+Feedback is stored in `feedback_records` and a calibration report is generated:
 
 ```text
-feedback_records
+Feedback records : 3
+Correct          : 2
+Incorrect        : 0
+Missing context  : 1
+Status           : COLLECTING_FEEDBACK
 ```
 
-and a calibration report is generated.
+Intended production behavior:
+
+```text
+Small sample      → measure calibration only
+Sufficient sample → calibration becomes actionable
+```
 
 The system intentionally avoids automatic confidence overrides from very small samples.
 
-Example:
-
-```text
-Feedback records   : 3
-Correct            : 2
-Incorrect          : 0
-Missing context    : 1
-Status             : COLLECTING_FEEDBACK
-```
-
-The intended production behavior is:
-
-```text
-Small sample
-    ↓
-measure calibration only
-
-Sufficient feedback
-    ↓
-calibration becomes actionable
-```
-
 ---
 
-## 15. API
-
-Start FastAPI from the project root:
-
-```powershell
-uvicorn api.main:app --reload
-```
-
-Swagger UI:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Important endpoints include:
-
-```text
-GET  /api/insights/latest
-GET  /api/insights/latest/executive
-GET  /api/insights/latest/operations
-
-GET  /api/insights/role?role=executive
-GET  /api/insights/role?role=operations
-GET  /api/insights/role?role=analyst
-
-GET  /api/actions
-GET  /api/events
-
-POST /api/feedback
-GET  /api/feedback
-GET  /api/calibration
-
-GET  /api/security/test
-
-GET  /api/validation/scenarios
-GET  /api/validation/sparse-history
-GET  /api/validation/causal
-GET  /api/validation/feedback
-```
-
----
-
-## 16. Dashboard
-
-Start Streamlit:
-
-```powershell
-streamlit run dashboard/app.py
-```
-
-The dashboard provides:
-- role selection;
-- KPI snapshot;
-- event information;
-- decomposition;
-- driver investigation;
-- actions;
-- evidence and governance;
-- analytical lineage;
-- LLM governance;
-- runtime telemetry;
-- event history;
-- Analyst feedback;
-- feedback calibration;
-- validation center.
-
-Default local URL:
-
-```text
-http://localhost:8501
-```
-
----
-
-## 17. LLM Setup
-
-The story generator requires a Groq API key.
-
-PowerShell:
-
-```powershell
-$env:GROQ_API_KEY="your_key_here"
-```
-
-Then run the story generator:
-
-```powershell
-python llm/story_generator.py
-```
-
-The final implementation uses an OpenAI-compatible Groq model endpoint and records telemetry such as:
-
-```json
-{
-  "model": "openai/gpt-oss-120b",
-  "prompt_tokens": 1279,
-  "completion_tokens": 443,
-  "total_tokens": 1722,
-  "model_calls": 1,
-  "estimated_cost_usd": 0.00045765
-}
-```
-
-### Security note
-
-Never commit the actual API key to GitHub.
-
-Use environment variables or a local `.env` file that is listed in `.gitignore`.
-
----
-
-## 18. NLP Setup
-
-The sentiment engine uses the Hugging Face model:
-
-```text
-cardiffnlp/twitter-xlm-roberta-base-sentiment
-```
-
-For environments where SentencePiece/protobuf support is required:
-
-```powershell
-python -m pip install sentencepiece protobuf
-```
-
-Restart the environment after installing missing tokenizer dependencies.
-
-The review pipeline processes the full review corpus and creates aspect-level evidence before sentiment analysis is used downstream.
-
----
-
-## 19. Recommended Installation
-
-Create and activate a virtual environment:
-
-```powershell
-python -m venv .venv
-.venv\Scripts\activate
-```
-
-Install dependencies:
-
-```powershell
-python -m pip install -r requirements.txt
-```
-
-If `requirements.txt` is not yet present or needs updating, install the major runtime dependencies:
-
-```powershell
-python -m pip install ^
-  duckdb ^
-  pandas ^
-  numpy ^
-  scikit-learn ^
-  streamlit ^
-  plotly ^
-  fastapi ^
-  uvicorn ^
-  requests ^
-  pydantic ^
-  groq ^
-  transformers ^
-  torch ^
-  sentencepiece ^
-  protobuf
-```
-
----
-
-## 20. Running the Analytical Pipeline
-
-Run the project from the repository root.
-
-The pipeline should be executed in dependency order so downstream modules can consume the generated analytical artifacts.
-
-A typical sequence is:
-
-```text
-1. Ingestion
-2. Analytical tables / daily KPIs
-3. Materiality
-4. Event clustering
-5. Driver investigation
-6. Business context
-7. Review aspects
-8. Sentiment
-9. Evidence fusion
-10. Confidence
-11. Actions
-12. Canonical insight
-13. LLM stories
-14. Narrative validation
-15. Scenario evaluation
-16. Sparse-history validation
-17. Causal analysis / diagnostics
-18. Role/security checks
-19. Feedback/calibration
-20. API
-21. Dashboard
-```
-
-For development, run individual modules when debugging instead of unnecessarily rebuilding the complete pipeline.
-
----
-
-## 21. Important Generated Artifacts
-
-The most useful generated outputs include:
-
-```text
-data/insights/latest_insight.json
-data/insights/executive_story.json
-data/insights/operations_story.json
-data/insights/executive_validation.json
-data/insights/operations_validation.json
-
-data/causal/delivery_review_causal_effect.json
-data/causal/causal_diagnostics.json
-data/causal/causal_evidence_record.json
-data/causal/causal_production_status.json
-
-data/scenarios/scenario_evaluation.json
-data/scenarios/scenario_engine_results.json
-data/scenarios/engine_evaluation.json
-data/scenarios/sparse_history_scenario.json
-
-data/feedback/feedback_records.json
-data/feedback/calibration_report.json
-```
-
-These artifacts make the analytical process inspectable and reproducible.
-
----
-
-## 22. Validation Philosophy
+## 19. Validation Philosophy
 
 BusinessIntelligence.ai uses a **deterministic-first** architecture.
 
 ### Deterministic / statistical layer
-Responsible for:
-- KPI values
-- baselines
-- z-scores
-- materiality
-- decompositions
-- contribution
-- evidence status
-- confidence
-- causal estimates
-- action eligibility
-- governance
+Responsible for: KPI values, baselines, z-scores, materiality, decompositions, contribution, evidence status, confidence, causal estimates, action eligibility, and governance.
 
 ### LLM layer
-Responsible for:
-- explanation
-- summarization
-- persona adaptation
-- natural-language formatting
+Responsible for: explanation, summarization, persona adaptation, and natural-language formatting.
 
 This prevents the LLM from silently becoming the source of quantitative truth.
 
 ---
 
-## 23. Known Limitations
+## 20. Design Principles
 
-This project is a decision-intelligence prototype, not a production enterprise analytics platform.
+1. **Evidence before explanation** — the narrative comes after the analytical evidence.
+2. **Contribution is not causality** — a segment can contribute to a movement without being its root cause.
+3. **Abstention is a feature** — the engine can explicitly say `Insufficient evidence.`
+4. **Business impact matters** — a statistically unusual movement is not automatically a business priority.
+5. **Unstructured data is evidence** — reviews supplement, not replace, structured KPI analysis.
+6. **Actions require evidence** — no high-impact interventions for contradicted or weakly supported hypotheses.
+7. **Human feedback is retained** — analyst feedback becomes measurable calibration evidence.
 
-Important limitations:
+---
+
+## 21. Troubleshooting
+
+### `GROQ_API_KEY is not set`
+Set it via your `.env` file (preferred) or for the current PowerShell session:
+
+```powershell
+$env:GROQ_API_KEY="your_key_here"
+```
+
+Then rerun the story generator. See [Section 7](#7-environment-variables-reference-env) for the full variable reference.
+
+### Hugging Face SentencePiece/protobuf error
+
+```powershell
+python -m pip install sentencepiece protobuf
+```
+
+Restart the environment and rerun the sentiment module.
+
+### FastAPI returns 500 with NaN JSON values
+Analytical endpoints should convert non-finite numeric values to JSON-safe values before returning them.
+
+### Streamlit crashes with `'list' object has no attribute 'get'`
+Check the actual JSON structure returned by the validation endpoint. The dashboard normalizes list/dictionary scenario formats.
+
+### Windows console Unicode error
+Prefer ASCII-safe logging for console output, or configure stdout/stderr for UTF-8 (`run_pipeline.py` already sets `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8` for pipeline steps).
+
+### Sparse-history scenario says `ABSTAIN`
+Expected behavior when there are insufficient historical observations for a reliable baseline.
+
+### `ModuleNotFoundError: No module named 'dotenv'`
+Install the missing dependency: `python -m pip install python-dotenv` (included in `requirements.txt`).
+
+---
+
+## 22. Known Limitations
+
+This project is a decision-intelligence **prototype**, not a production enterprise analytics platform.
 
 1. The causal module uses observational data and cannot eliminate unmeasured confounding.
 2. Role-based filtering is application-level authorization, not enterprise authentication.
@@ -1022,154 +833,49 @@ Important limitations:
 
 ---
 
-## 24. Troubleshooting
+## 23. Documentation & Navigation
 
-### `GROQ_API_KEY is not set`
+- 📖 **Getting Started** → [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first-run guide
+- 🏗️ **Architecture walkthrough** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map
+- 🤝 **Contributing** → [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- 👥 **Authors & credit** → [`AUTHORS.md`](AUTHORS.md)
+- 🗒️ **Changelog** → [`CHANGELOG.md`](CHANGELOG.md)
+- 🛡️ **Code of Conduct** → [`.github/CODE_OF_CONDUCT.md`](.github/CODE_OF_CONDUCT.md)
 
-PowerShell:
-
-```powershell
-$env:GROQ_API_KEY="your_key_here"
-```
-
-Then rerun the story generator.
-
-### Hugging Face SentencePiece/protobuf error
-
-Install:
-
-```powershell
-python -m pip install sentencepiece protobuf
-```
-
-Restart the environment and rerun the sentiment module.
-
-### FastAPI returns 500 with NaN JSON values
-
-Analytical endpoints should convert non-finite numeric values to JSON-safe values before returning them.
-
-### Streamlit crashes with `'list' object has no attribute 'get'`
-
-Check the actual JSON structure returned by the validation endpoint. The dashboard normalizes list/dictionary scenario formats.
-
-### Windows console Unicode error
-
-Prefer ASCII-safe logging for console output, or configure stdout/stderr for UTF-8.
-
-### Sparse-history scenario says `ABSTAIN`
-
-This is expected behavior when there are insufficient historical observations for a reliable baseline.
+**Maintainers:** [Mokshith](https://github.com/mokshith27) (project lead — core engine), Mukesh (co-maintainer — documentation & community), and the third co-maintainer (see [`AUTHORS.md`](AUTHORS.md)). Role responsibilities are recorded in [`AUTHORS.md`](AUTHORS.md).
 
 ---
 
-## 25. Design Principles
+## 24. License
 
-BusinessIntelligence.ai follows these principles:
-
-### 1. Evidence before explanation
-The narrative comes after the analytical evidence.
-
-### 2. Contribution is not causality
-A segment can contribute to an observed KPI movement without being its root cause.
-
-### 3. Abstention is a feature
-The engine can explicitly say:
-
-```text
-Insufficient evidence.
-```
-
-### 4. Business impact matters
-A statistically unusual movement is not automatically a business priority.
-
-### 5. Unstructured data is evidence
-Reviews supplement structured KPI analysis rather than replacing it.
-
-### 6. Actions require evidence
-High-impact interventions should not be recommended for contradicted or insufficiently supported hypotheses.
-
-### 7. Human feedback is retained
-Analyst feedback becomes measurable calibration evidence.
-
----
-
-## 26. Quick Start
-
-```powershell
-# 1. Create environment
-python -m venv .venv
-.venv\Scripts\activate
-
-# 2. Install dependencies
-python -m pip install -r requirements.txt
-
-# 3. Set Groq API key
-$env:GROQ_API_KEY="your_key_here"
-
-# 4. Build / refresh analytical artifacts
-# Run the project's pipeline or required ingestion modules.
-
-# 5. Start API
-uvicorn api.main:app --reload
-
-# 6. In a second terminal, start dashboard
-streamlit run dashboard/app.py
-```
-
-Open:
-
-```text
-Dashboard:
-http://localhost:8501
-
-API / Swagger:
-http://127.0.0.1:8000/docs
-```
-
----
-
-## 27. Project Outcome
-
-BusinessIntelligence.ai turns:
-
-```text
-"What happened?"
-```
-
-into:
-
-```text
-What changed?
-    ↓
-Was it materially important?
-    ↓
-Where did it happen?
-    ↓
-What evidence supports the explanation?
-    ↓
-How confident are we?
-    ↓
-Should we abstain?
-    ↓
-What can the business do?
-    ↓
-Who should act?
-    ↓
-How should the result be explained?
-```
-
-The result is a decision workspace designed to be **evidence-grounded, uncertainty-aware, action-oriented, and auditable**.
-
----
-
-## 28. License
-
-Add the project's intended license here before publishing publicly.
-
-For example:
+Add the project's intended license here before publishing publicly. For example:
 
 ```text
 MIT License
 ```
 
 only if that is the license you choose for the repository.
+
+2. [Key Capabilities](#2-key-capabilities)
+3. [System Architecture](#3-system-architecture)
+4. [Tech Stack](#4-tech-stack)
+5. [Project Structure](#5-project-structure)
+6. [Getting Started — Step by Step](#6-getting-started--step-by-step)
+7. [Environment Variables Reference (`.env`)](#7-environment-variables-reference-env)
+8. [The Analytical Pipeline](#8-the-analytical-pipeline)
+9. [Generated Artifacts](#9-generated-artifacts)
+10. [API Reference](#10-api-reference)
+11. [Dashboard](#11-dashboard)
+12. [LLM Layer & Narrative Governance](#12-llm-layer--narrative-governance)
+13. [NLP / Sentiment Layer](#13-nlp--sentiment-layer)
+14. [Causal Analysis](#14-causal-analysis)
+15. [Sparse-History Safety](#15-sparse-history-safety)
+16. [Controlled Scenario Evaluation](#16-controlled-scenario-evaluation)
+17. [Role-Based Security](#17-role-based-security)
+18. [Human-in-the-Loop Feedback](#18-human-in-the-loop-feedback)
+19. [Validation Philosophy](#19-validation-philosophy)
+20. [Design Principles](#20-design-principles)
+21. [Troubleshooting](#21-troubleshooting)
+22. [Known Limitations](#22-known-limitations)
+23. [Documentation & Navigation](#23-documentation--navigation)
+24. [License](#24-license)
