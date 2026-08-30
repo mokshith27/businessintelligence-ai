@@ -216,108 +216,91 @@ def calculate_movement(
     comparison_start = event["comparison_start"]
     comparison_end = event["comparison_end"]
 
-    rows = con.execute(
+    # ------------------------------------------------------------
+    # CURRENT PERIOD
+    # ------------------------------------------------------------
+
+    current_row = con.execute(
         """
         SELECT
-            CASE
-                WHEN
-                    CAST(o.order_purchase_timestamp AS DATE)
-                    >= ?
-                    AND CAST(o.order_purchase_timestamp AS DATE)
-                    < ?
-                THEN 'current'
-                ELSE 'previous'
-            END AS period,
-
-            SUM(
-                CASE
-                    WHEN
-                        CAST(o.order_purchase_timestamp AS DATE) >= ?
-                        AND CAST(o.order_purchase_timestamp AS DATE) < ?
-                    THEN oi.price
-                    ELSE 0
-                END
-            ) AS gmv,
-
-            COUNT(
-                DISTINCT CASE
-                    WHEN
-                        CAST(o.order_purchase_timestamp AS DATE) >= ?
-                        AND CAST(o.order_purchase_timestamp AS DATE) < ?
-                    THEN o.order_id
-                    ELSE NULL
-                END
-            ) AS orders
-
+            COALESCE(SUM(oi.price), 0.0) AS gmv,
+            COUNT(DISTINCT o.order_id) AS orders
         FROM fact_order_items_enriched oi
-
         INNER JOIN fact_orders_enriched o
             ON o.order_id = oi.order_id
-
         WHERE
-            (
-                CAST(o.order_purchase_timestamp AS DATE)
-                >= ?
-                AND CAST(o.order_purchase_timestamp AS DATE)
-                < ?
-            )
-            OR
-            (
-                CAST(o.order_purchase_timestamp AS DATE)
-                >= ?
-                AND CAST(o.order_purchase_timestamp AS DATE)
-                < ?
-            )
-
-        GROUP BY
-            1
-        ORDER BY
-            1;
+            CAST(o.order_purchase_timestamp AS DATE)
+            >= ?
+            AND
+            CAST(o.order_purchase_timestamp AS DATE)
+            < ?;
         """,
         [
             start,
             end_exclusive,
-            start,
-            end_exclusive,
-            start,
-            end_exclusive,
+        ],
+    ).fetchone()
+
+    # ------------------------------------------------------------
+    # PREVIOUS / COMPARISON PERIOD
+    # ------------------------------------------------------------
+
+    previous_row = con.execute(
+        """
+        SELECT
+            COALESCE(SUM(oi.price), 0.0) AS gmv,
+            COUNT(DISTINCT o.order_id) AS orders
+        FROM fact_order_items_enriched oi
+        INNER JOIN fact_orders_enriched o
+            ON o.order_id = oi.order_id
+        WHERE
+            CAST(o.order_purchase_timestamp AS DATE)
+            >= ?
+            AND
+            CAST(o.order_purchase_timestamp AS DATE)
+            < ?;
+        """,
+        [
             comparison_start,
             comparison_end,
-            start,
-            end_exclusive,
         ],
-    ).fetchall()
+    ).fetchone()
 
-    period_map = {
-        str(row[0]): row
-        for row in rows
-    }
+    # ------------------------------------------------------------
+    # VALIDATE RESULTS
+    # ------------------------------------------------------------
 
-    previous_row = period_map.get(
-        "previous",
-        ("previous", 0.0, 0),
-    )
+    if current_row is None:
+        raise RuntimeError(
+            f"Could not calculate current-period movement "
+            f"for event {event['event_id']}."
+        )
 
-    current_row = period_map.get(
-        "current",
-        ("current", 0.0, 0),
-    )
-
-    previous_gmv = float(
-        previous_row[1] or 0
-    )
+    if previous_row is None:
+        raise RuntimeError(
+            f"Could not calculate comparison-period movement "
+            f"for event {event['event_id']}."
+        )
 
     current_gmv = float(
-        current_row[1] or 0
-    )
-
-    previous_orders = int(
-        previous_row[2] or 0
+        current_row[0] or 0.0
     )
 
     current_orders = int(
-        current_row[2] or 0
+        current_row[1] or 0
     )
+
+    previous_gmv = float(
+        previous_row[0] or 0.0
+    )
+
+    previous_orders = int(
+        previous_row[1] or 0
+    )
+
+    # ------------------------------------------------------------
+    # AOV
+    # ------------------------------------------------------------
 
     previous_aov = (
         previous_gmv / previous_orders
@@ -330,6 +313,10 @@ def calculate_movement(
         if current_orders > 0
         else None
     )
+
+    # ------------------------------------------------------------
+    # MOVEMENT
+    # ------------------------------------------------------------
 
     gmv_change = (
         current_gmv
@@ -350,13 +337,15 @@ def calculate_movement(
         else None
     )
 
-    # Same midpoint decomposition convention used by the
-    # existing canonical movement implementation.
+    # ------------------------------------------------------------
+    # MIDPOINT DECOMPOSITION
+    # ------------------------------------------------------------
+
     volume_effect = (
         orders_change
         * (
-            (previous_aov or 0)
-            + (current_aov or 0)
+            (previous_aov or 0.0)
+            + (current_aov or 0.0)
         )
         / 2.0
         if (

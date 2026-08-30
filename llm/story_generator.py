@@ -4,6 +4,7 @@ import os
 import re
 import time
 import requests
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -40,10 +41,10 @@ MODEL_NAME = os.getenv(
 ).strip()
 
 # Comma-separated provider:model candidates.
-# Example:
-# openrouter:stealth/ox-alpha,
-# openrouter:anthropic/claude-sonnet-4.6,
-# groq:openai/gpt-oss-120b
+# Example free configuration:
+# openrouter:nvidia/nemotron-3-ultra-550b-a55b:free,
+# openrouter:google/gemma-4-31b-it:free,
+# openrouter:openrouter/free
 LLM_FALLBACKS = [
     item.strip()
     for item in os.getenv(
@@ -60,7 +61,7 @@ MODEL_PURPOSE = (
 MAX_OUTPUT_TOKENS = int(
     os.getenv(
         "LLM_MAX_OUTPUT_TOKENS",
-        "1200",
+        "800",
     )
 )
 
@@ -1671,7 +1672,7 @@ def generate_story(
                     },
                 },
 
-                timeout=120,
+                timeout=(10, 45),
             )
 
             if response.status_code >= 400:
@@ -2322,17 +2323,213 @@ def clean_generated_narrative(
     return cleaned
 
 
+def _generate_one_persona_candidate(
+    investigation,
+    persona,
+    provider,
+    model,
+    validation_feedback=None,
+):
+    """
+    Generate, clean, and return one persona narrative.
+
+    This function is intentionally self-contained so candidates can run
+    concurrently without sharing mutable provider state.
+    """
+
+    started = time.perf_counter()
+
+    client = create_provider_client(
+        provider
+    )
+
+    system_prompt = build_system_prompt()
+
+    if persona == "executive":
+
+        prompt = build_dynamic_executive_prompt(
+            investigation,
+            validation_feedback,
+        )
+
+    else:
+
+        prompt = build_dynamic_operations_prompt(
+            investigation,
+            validation_feedback,
+        )
+
+    result = generate_story(
+        client,
+        prompt,
+        system_prompt,
+        provider=provider,
+        model=model,
+    )
+
+    result["story"] = clean_generated_narrative(
+        result["story"],
+        persona,
+    )
+
+    result["telemetry"]["router_elapsed_ms"] = round(
+        (time.perf_counter() - started) * 1000,
+        2,
+    )
+
+    return result
+
+
+def _race_persona_candidates(
+    investigation,
+    persona,
+    candidates,
+    validation_feedback=None,
+):
+    """
+    Run all configured candidates concurrently for one persona.
+
+    The first candidate that produces a valid cleaned narrative wins.
+    A slow or failed model therefore does not block a faster fallback.
+    """
+
+    if not candidates:
+        raise RuntimeError(
+            f"No configured LLM candidates for {persona}."
+        )
+
+    failures = []
+    winner = None
+
+    max_workers = len(candidates)
+
+    with ThreadPoolExecutor(
+        max_workers=max_workers,
+        thread_name_prefix=f"llm-{persona}",
+    ) as executor:
+
+        future_map = {
+            executor.submit(
+                _generate_one_persona_candidate,
+                investigation,
+                persona,
+                provider,
+                model,
+                validation_feedback,
+            ): (
+                provider,
+                model,
+            )
+            for provider, model in candidates
+        }
+
+        for future in as_completed(
+            future_map
+        ):
+
+            provider, model = future_map[
+                future
+            ]
+
+            try:
+
+                result = future.result()
+
+                winner = (
+                    provider,
+                    model,
+                    result,
+                )
+
+                # Do not wait for slower candidates. Futures that have not
+                # started are cancelled; already-running HTTP requests may
+                # finish in the background but their results are ignored.
+                for other in future_map:
+
+                    if other is not future:
+                        other.cancel()
+
+                if LLM_DEBUG:
+
+                    print(
+                        f"[LLM ROUTER] WINNER persona={persona} "
+                        f"provider={provider} model={model}"
+                    )
+
+                break
+
+            except Exception as exc:
+
+                error_text = str(exc)
+
+                failures.append(
+                    {
+                        "provider":
+                            provider,
+
+                        "model":
+                            model,
+
+                        "error":
+                            error_text,
+                    }
+                )
+
+                if LLM_DEBUG:
+
+                    print(
+                        f"[LLM ROUTER] FAILED persona={persona} "
+                        f"provider={provider} model={model}: "
+                        f"{error_text}"
+                    )
+
+    if winner is None:
+
+        raise RuntimeError(
+            f"All configured LLM candidates failed for "
+            f"{persona}. "
+            + json.dumps(
+                failures,
+                ensure_ascii=False,
+            )
+        )
+
+    provider, model, result = winner
+
+    return {
+        "result":
+            result,
+
+        "model_route": {
+            "provider":
+                provider,
+
+            "model":
+                model,
+
+            "parallel_candidates":
+                len(candidates),
+
+            "failed_candidates_before_winner":
+                failures,
+        },
+    }
+
+
 def generate_event_narratives(
     investigation,
     validation_feedback=None,
 ):
     """
-    Generate Executive + Operations narratives using the configured
-    primary model and then fallback candidates when the provider/model
-    fails.
+    Generate Executive + Operations narratives using concurrent candidate
+    racing.
 
-    A single selected candidate is used for both personas so that the
-    two narratives come from the same model for one request.
+    IMPORTANT:
+    - Candidates are NOT tried serially.
+    - A slow/failed primary therefore does not add its timeout to the
+      successful fallback.
+    - Executive and Operations race independently.
+    - The first successful, cleaned narrative wins for each persona.
     """
 
     load_dotenv()
@@ -2344,116 +2541,96 @@ def generate_event_narratives(
     )
 
     if event_id is None:
+
         raise ValueError(
             "Selected-event investigation is missing event_id."
         )
 
     candidates = configured_model_candidates()
 
-    failures = []
+    if not candidates:
 
-    for provider, model in candidates:
+        raise RuntimeError(
+            "No LLM candidates are configured."
+        )
+
+    # Two persona races are also independent. This means Operations does not
+    # wait for Executive, and vice versa.
+    with ThreadPoolExecutor(
+        max_workers=2,
+        thread_name_prefix="llm-persona",
+    ) as executor:
+
+        executive_future = executor.submit(
+            _race_persona_candidates,
+            investigation,
+            "executive",
+            candidates,
+            validation_feedback,
+        )
+
+        operations_future = executor.submit(
+            _race_persona_candidates,
+            investigation,
+            "operations",
+            candidates,
+            validation_feedback,
+        )
 
         try:
 
-            client = create_provider_client(
-                provider
+            executive_package = (
+                executive_future.result()
             )
 
-            system_prompt = (
-                build_system_prompt()
+            operations_package = (
+                operations_future.result()
             )
 
-            executive = generate_story(
-                client,
-                build_dynamic_executive_prompt(
-                    investigation,
-                    validation_feedback,
-                ),
-                system_prompt,
-                provider=provider,
-                model=model,
-            )
+        except Exception:
 
-            operations = generate_story(
-                client,
-                build_dynamic_operations_prompt(
-                    investigation,
-                    validation_feedback,
-                ),
-                system_prompt,
-                provider=provider,
-                model=model,
-            )
+            # Ensure the other task is no longer queued before propagating.
+            executive_future.cancel()
+            operations_future.cancel()
+            raise
 
-            executive["story"] = clean_generated_narrative(
-                executive["story"],
-                "executive",
-            )
+    executive = executive_package[
+        "result"
+    ]
 
-            operations["story"] = clean_generated_narrative(
-                operations["story"],
-                "operations",
-            )
+    operations = operations_package[
+        "result"
+    ]
 
-            return {
-                "event_id":
-                    event_id,
+    return {
+        "event_id":
+            event_id,
 
-                "executive":
-                    executive,
+        "executive":
+            executive,
 
-                "operations":
-                    operations,
+        "operations":
+            operations,
 
-                "generated":
-                    True,
+        "generated":
+            True,
 
-                "source":
-                    "selected_event_investigation",
+        "source":
+            "selected_event_investigation",
 
-                "model_route": {
-                    "provider":
-                        provider,
+        "model_route": {
+            "executive":
+                executive_package[
+                    "model_route"
+                ],
 
-                    "model":
-                        model,
+            "operations":
+                operations_package[
+                    "model_route"
+                ],
+        },
+    }
 
-                    "fallback_attempts":
-                        len(failures),
-
-                    "previous_failures":
-                        failures,
-                },
-            }
-
-        except Exception as exc:
-
-            error_text = str(exc)
-
-            failures.append(
-                {
-                    "provider":
-                        provider,
-
-                    "model":
-                        model,
-
-                    "error":
-                        error_text,
-                }
-            )
-
-            # Try the next configured candidate.
-            continue
-
-    raise RuntimeError(
-        "All configured LLM candidates failed. "
-        + json.dumps(
-            failures,
-            ensure_ascii=False,
-        )
-    )
 
 
 # ============================================================

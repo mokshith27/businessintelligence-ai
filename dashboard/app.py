@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime, date
 
 import requests
 import streamlit as st
@@ -274,6 +275,89 @@ def format_pct(value):
         return "—"
 
 
+def format_metric_delta(value, *, zero_baseline=False):
+    """
+    Format a KPI delta for st.metric.
+
+    A percentage change is undefined when the comparison-period
+    denominator is zero. In that case show an explicit state instead
+    of leaving the KPI visually blank.
+    """
+    if zero_baseline:
+        return "New baseline"
+
+    if value is None:
+        return None
+
+    try:
+        return f"{float(value):+.1f}%"
+    except (TypeError, ValueError):
+        return None
+
+
+def safe_pct_change(current, previous):
+    """
+    Return percentage change when mathematically meaningful.
+
+    When previous == 0:
+        - current == 0 -> 0.0
+        - current != 0 -> None (new baseline / undefined rate)
+    """
+    if current is None or previous is None:
+        return None
+
+    try:
+        current = float(current)
+        previous = float(previous)
+    except (TypeError, ValueError):
+        return None
+
+    if previous == 0:
+        if current == 0:
+            return 0.0
+        return None
+
+    return (current - previous) / previous * 100
+
+
+def format_event_date(value):
+    """Format API/DB date values as 'Nov 23, 2017'."""
+    if value is None:
+        return "—"
+
+    if isinstance(value, datetime):
+        return value.strftime("%b %d, %Y")
+
+    if isinstance(value, date):
+        return value.strftime("%b %d, %Y")
+
+    raw = str(value).strip()
+
+    # ISO datetime: 2018-08-22T00:00:00
+    try:
+        return datetime.fromisoformat(
+            raw.replace("Z", "+00:00")
+        ).strftime("%b %d, %Y")
+    except ValueError:
+        pass
+
+    # ISO date: 2018-08-22
+    try:
+        return datetime.strptime(
+            raw[:10],
+            "%Y-%m-%d"
+        ).strftime("%b %d, %Y")
+    except ValueError:
+        return raw
+
+
+def event_date_range(start, end):
+    return (
+        f"{format_event_date(start)} → "
+        f"{format_event_date(end)}"
+    )
+
+
 def status_badge(status):
 
     mapping = {
@@ -378,6 +462,11 @@ with st.sidebar:
                 "—"
             )
 
+            display_range = event_date_range(
+                start_date,
+                end_date,
+            )
+
             priority = row.get(
                 "investigation_priority",
                 "—"
@@ -390,7 +479,7 @@ with st.sidebar:
 
             label = (
                 f"Event {event_id} | "
-                f"{start_date} → {end_date} | "
+                f"{display_range} | "
                 f"{direction} | {priority}"
             )
 
@@ -548,6 +637,16 @@ movement = insight.get(
     {},
 )
 
+# st.write(
+#     "DEBUG EVENT:",
+#     selected_event_id,
+# )
+
+# st.write(
+#     "DEBUG MOVEMENT:",
+#     movement,
+# )
+
 drivers = insight.get(
     "drivers",
     [],
@@ -565,8 +664,10 @@ with st.sidebar:
     )
 
     st.write(
-        f"**{event.get('start_date', '—')} "
-        f"→ {event.get('end_date', '—')}**"
+        f"**{event_date_range(
+            event.get("start_date"),
+            event.get("end_date"),
+        )}**"
     )
 
     st.write(
@@ -614,8 +715,10 @@ if selected_event_id is not None:
 
     st.caption(
         f"Investigating Event {selected_event_id}: "
-        f"{event.get('start_date', '—')} → "
-        f"{event.get('end_date', '—')}"
+        f"{event_date_range(
+            event.get("start_date"),
+            event.get("end_date"),
+        )}"
     )
 
 
@@ -635,21 +738,15 @@ current_gmv = movement.get(
     "current_gmv"
 )
 
-if (
-    previous_gmv is not None
-    and previous_gmv != 0
-    and change is not None
-):
+gmv_pct = safe_pct_change(
+    current_gmv,
+    previous_gmv,
+)
 
-    gmv_pct = (
-        float(change)
-        / float(previous_gmv)
-        * 100
-    )
-
-else:
-
-    gmv_pct = None
+gmv_new_baseline = (
+    previous_gmv == 0
+    and current_gmv not in (None, 0)
+)
 
 
 current_orders = movement.get(
@@ -672,21 +769,15 @@ aov_change = movement.get(
     "aov_change"
 )
 
-if (
-    previous_aov is not None
-    and previous_aov != 0
-    and aov_change is not None
-):
+aov_change_pct = safe_pct_change(
+    current_aov,
+    previous_aov,
+)
 
-    aov_change_pct = (
-        float(aov_change)
-        / float(previous_aov)
-        * 100
-    )
-
-else:
-
-    aov_change_pct = None
+aov_new_baseline = (
+    previous_aov == 0
+    and current_aov not in (None, 0)
+)
 
 
 # ------------------------------------------------------------
@@ -791,8 +882,9 @@ with col1:
         format_brl(
             current_gmv
         ),
-        format_pct(
-            gmv_pct
+        format_metric_delta(
+            gmv_pct,
+            zero_baseline=gmv_new_baseline,
         ),
     )
 
@@ -836,8 +928,9 @@ with col4:
         format_brl(
             current_aov
         ),
-        format_pct(
-            aov_change_pct
+        format_metric_delta(
+            aov_change_pct,
+            zero_baseline=aov_new_baseline,
         ),
     )
 
@@ -1290,61 +1383,72 @@ if role == "Executive":
     )
 
     volume_effect = movement.get(
-        "volume_effect",
-        0,
+        "volume_effect"
     )
 
     aov_effect = movement.get(
-        "aov_effect",
-        0,
+        "aov_effect"
     )
 
-    fig = go.Figure()
+    if (
+        volume_effect is not None
+        and aov_effect is not None
+    ):
 
-    fig.add_trace(
-        go.Bar(
-            x=[
-                "Volume",
-                "AOV",
-                "Net GMV Change",
-            ],
+        fig = go.Figure()
 
-            y=[
-                volume_effect,
-                aov_effect,
-                change,
-            ],
+        fig.add_trace(
+            go.Bar(
+                x=[
+                    "Volume",
+                    "AOV",
+                    "Net GMV Change",
+                ],
 
-            text=[
-                format_brl(
-                    volume_effect
-                ),
+                y=[
+                    volume_effect,
+                    aov_effect,
+                    change,
+                ],
 
-                format_brl(
-                    aov_effect
-                ),
+                text=[
+                    format_brl(
+                        volume_effect
+                    ),
 
-                format_brl(
-                    change
-                ),
-            ],
+                    format_brl(
+                        aov_effect
+                    ),
 
-            textposition="auto",
+                    format_brl(
+                        change
+                    ),
+                ],
+
+                textposition="auto",
+            )
         )
-    )
 
-    fig.update_layout(
-        title="GMV contribution decomposition",
-        yaxis_title="BRL",
-        xaxis_title="Component",
-        height=400,
-        showlegend=False,
-    )
+        fig.update_layout(
+            title="GMV contribution decomposition",
+            yaxis_title="BRL",
+            xaxis_title="Component",
+            height=400,
+            showlegend=False,
+        )
 
-    st.plotly_chart(
-        fig,
-        width="stretch",
-    )
+        st.plotly_chart(
+            fig,
+            width="stretch",
+        )
+
+    else:
+
+        st.info(
+            "Volume/AOV decomposition is not available "
+            "for this event because the comparison baseline "
+            "is incomplete."
+        )
 
     # --------------------------------------------------------
     # Top contributors
