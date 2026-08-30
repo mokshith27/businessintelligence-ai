@@ -9,7 +9,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from groq import Groq
 
-
 # ============================================================
 # PATHS
 # ============================================================
@@ -131,7 +130,6 @@ def get_llm_configuration():
                 )
             ),
     }
-
 
 # ============================================================
 # COST ESTIMATION
@@ -708,6 +706,8 @@ def build_executive_prompt(
         max_drivers=5,
     )
 
+    feedback_block = ""
+
     return f"""
 Create a concise executive KPI story.
 
@@ -760,7 +760,6 @@ DATA:
 {feedback_block}
 """
 
-
 # ============================================================
 # OPERATIONS PROMPT
 # ============================================================
@@ -773,6 +772,8 @@ def build_operations_prompt(
         insight,
         max_drivers=5,
     )
+
+    feedback_block = ""
 
     return f"""
 Create a concise operations-focused KPI explanation.
@@ -832,7 +833,6 @@ DATA:
         ensure_ascii=False,
     )}
 """
-
 
 # ============================================================
 # JSON-SAFE CONTEXT
@@ -1007,7 +1007,6 @@ def build_dynamic_event_context(
         "aov_share_of_absolute_change_pct":
             aov_share_pct,
     }
-
     # --------------------------------------------------------
     # Review evidence
     # --------------------------------------------------------
@@ -1200,7 +1199,6 @@ def build_dynamic_event_context(
                 experience
             )
         )
-
     # --------------------------------------------------------
     # Explicit grounding metadata
     # --------------------------------------------------------
@@ -2629,8 +2627,6 @@ def generate_event_narratives(
         },
     }
 
-
-
 # ============================================================
 # SAVE STORY
 # ============================================================
@@ -2689,7 +2685,6 @@ def save_story(
 
     return output_path
 
-
 # ============================================================
 # PRINT TELEMETRY
 # ============================================================
@@ -2737,7 +2732,6 @@ def print_telemetry(
         f"Estimated cost     : "
         f"${telemetry['estimated_cost_usd']:.8f}"
     )
-
 
 # ============================================================
 # MAIN
@@ -2899,7 +2893,6 @@ def main():
     print("\n" + "=" * 100)
     print("LLM STORY GENERATION COMPLETE")
     print("=" * 100)
-
 
 # ============================================================
 # ENTRY POINT
