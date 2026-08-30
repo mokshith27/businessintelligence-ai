@@ -7,7 +7,7 @@ transparent, human-readable credit. It complements — it never replaces — git
 |---|---|---|---|
 | Project Lead — AI/ML & Decision Intelligence | Mokshith | [mokshith27](https://github.com/mokshith27) | mokshithmsd@gmail.com |
 | Core Contributor — Data Engineering & Analytics | Mukesh | [Mukesh1701](https://github.com/Mukesh1701) | veeravallimukesh20006@gmail.com |
-| Core Contributor — Backend Engineering & Frontend Development | Rahul Patel | rahulpatelbollam06 | rahulpatelbollam06@gmail.com |
+| Core Contributor — Backend Engineering & Frontend Development | Rahul Patel | [rahulpatelbollam06](https://github.com/rahulpatelbollam06) | rahulpatelbollam06@gmail.com |
 
 ## Team agreement
 
