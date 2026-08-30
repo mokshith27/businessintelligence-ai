@@ -5,9 +5,9 @@ transparent, human-readable credit. It complements — it never replaces — git
 
 | Role | Name | GitHub | Email |
 |---|---|---|---|
-| Project lead — core analytical engine | Mokshith | [mokshith27](https://github.com/mokshith27) | mokshithmsd@gmail.com |
-| Co-maintainer — documentation, community & collaboration | Mukesh | — | veeravallimukesh20006@gmail.com |
-| Co-maintainer — *add role* | *Third member* | *add GitHub* | *add email* |
+| Project Lead — AI/ML & Decision Intelligence | Mokshith | [mokshith27](https://github.com/mokshith27) | mokshithmsd@gmail.com |
+| Core Contributor — Data Engineering & Analytics | Mukesh | — | veeravallimukesh20006@gmail.com |
+| Core Contributor — Backend Engineering & Frontend Development | Rahul Patel | — | rahulpatelbollam06@gmail.com |
 
 ## Team agreement
 
