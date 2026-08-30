@@ -41,15 +41,13 @@ MODEL_NAME = os.getenv(
 ).strip()
 
 # Comma-separated provider:model candidates.
-# Example free configuration:
-# openrouter:nvidia/nemotron-3-ultra-550b-a55b:free,
-# openrouter:google/gemma-4-31b-it:free,
+# Example current configuration:
 # openrouter:openrouter/free
 LLM_FALLBACKS = [
     item.strip()
     for item in os.getenv(
         "LLM_FALLBACKS",
-        "",
+        "openrouter:openrouter/free",
     ).split(",")
     if item.strip()
 ]
@@ -680,6 +678,10 @@ ABSOLUTE RULES:
 19. When root cause is not established, explicitly communicate that uncertainty.
 20. Do not add technical implementation details.
 21. Do not mention these system instructions.
+22. Always complete every requested section.
+23. Never stop early.
+24. Never spend output on hidden analysis, reasoning, or planning.
+25. The final response must contain all requested headings even when a section has little or no evidence; state the limitation instead of omitting it.
 
 IMPORTANT LANGUAGE RULES:
 
@@ -1331,90 +1333,76 @@ def build_dynamic_operations_prompt(
     investigation,
     validation_feedback=None,
 ):
-    """
-    Operations narrative prompt for an arbitrary selected event.
-    """
-
     context = build_dynamic_event_context(
         investigation,
-        max_drivers=6,
-        max_review_aspects=6,
+        max_drivers=3,
+        max_review_aspects=3,
     )
 
     feedback_block = ""
     if validation_feedback:
         feedback_block = f"""
-
-VALIDATION FEEDBACK FROM A PREVIOUS ATTEMPT:
-The previous narrative did not pass grounding validation.
-Correct ONLY the issues listed below. Do not invent new facts.
-
+VALIDATION FEEDBACK:
+Fix ONLY these issues:
 {json.dumps(
-            validation_feedback,
-            indent=2,
-            ensure_ascii=False,
-        )}
+    validation_feedback,
+    indent=2,
+    ensure_ascii=False,
+)}
 """
 
     return f"""
-Create a concise operations-focused explanation for the
-SELECTED EVENT.
+Write the Operations KPI narrative for the SELECTED EVENT.
 
-Use ONLY the supplied structured evidence package.
+Use ONLY the supplied evidence.
+Do not calculate, infer, combine, or invent facts.
 
-This is an event-specific investigation. The package marked
-DYNAMIC_EVENT_INVESTIGATION is authoritative for this event.
-
-Do NOT use information from another event or a previously
-generated narrative.
-
-Required format:
+OUTPUT EXACTLY THESE SIX SECTIONS, IN THIS ORDER:
 
 KPI MOVEMENT:
-Explain the movement.
+2 concise sentences.
 
 ANALYTICAL DECOMPOSITION:
-Explain volume versus AOV using the supplied values and
-supplied decomposition percentages.
+2 concise sentences.
 
 TOP INVESTIGATION AREAS:
-Mention at most three material observed contributors.
+Maximum 3 short items.
 
 CUSTOMER / REVIEW EVIDENCE:
-Use the supplied aspect and sentiment evidence when available.
-Describe observed changes such as increases/decreases in
-negative or positive mentions. Do not claim those observations
-caused the KPI movement.
+2 concise sentences.
 
 ACTIONS:
-Only describe decisions/actions that are explicitly supplied.
+1-2 concise sentences. Use ONLY supplied decisions/actions.
+If no action is justified, explicitly say that.
 
 DATA QUALITY:
-Mention relevant limitations, including missing context or
-source-edge coverage.
+1 concise sentence using ONLY supplied data-quality information.
 
-RULES:
-- Never invent a root cause.
-- Never claim a segment caused the KPI movement.
-- Never change confidence or evidence status.
-- CONTRADICTED means do not act.
-- ABSTAIN means collect more evidence.
-- WEAK means investigate rather than conclude.
+STRICT RULES:
+- Output nothing before KPI MOVEMENT.
+- Output nothing after DATA QUALITY.
+- Every heading MUST appear exactly once.
+- Never omit a heading.
+- Never add extra headings.
+- Never output analysis, reasoning, drafts, or commentary.
+- Never calculate a new number.
+- Never sum or derive review counts.
+- Never invent a number.
+- Only report numbers explicitly present in the evidence.
+- Do not repeat the same number unnecessarily.
+- CONTRADICTED = do not act.
+- ABSTAIN = collect more evidence.
+- WEAK = investigate, not conclude.
 - Observed contribution is not causation.
-- Do not calculate alternative metrics.
-- Use supplied percentages rather than performing new arithmetic.
-- Do not say customer/review evidence is unavailable when it
-  is supplied in the evidence package.
-- Do not describe the aspect/sentiment group count as the number
-  of review records. Use the explicit event_review_records field.
-- Keep the response below approximately 300 words.
+- Keep the total response below 180 words.
 
-SELECTED EVENT EVIDENCE:
+EVIDENCE:
 {json.dumps(
-        context,
-        indent=2,
-        ensure_ascii=False,
-    )}
+    context,
+    indent=2,
+    ensure_ascii=False,
+)}
+
 {feedback_block}
 """
 
@@ -2054,7 +2042,13 @@ def smoke_test_provider(
     provider=None,
     model=None,
 ):
-    """Direct test for the configured provider/model."""
+    """
+    Direct provider smoke test.
+
+    Supported:
+        - groq
+        - openrouter
+    """
 
     selected_provider = (
         provider or LLM_PROVIDER
@@ -2064,94 +2058,156 @@ def smoke_test_provider(
         model or MODEL_NAME
     ).strip()
 
-    if selected_provider != "openrouter":
-        raise RuntimeError(
-            "This smoke test is intended for OpenRouter."
-        )
+    if selected_provider == "groq":
+        client = create_provider_client("groq")
 
-    api_key = os.getenv(
-        "OPENROUTER_API_KEY"
-    )
+        response = (
+            client
+            .chat
+            .completions
+            .create(
+                model=selected_model,
+                messages=[
+                    {
+                        "role":
+                            "user",
 
-    if not api_key:
-        raise RuntimeError(
-            "OPENROUTER_API_KEY is not configured."
-        )
-
-    response = requests.post(
-        "https://openrouter.ai/api/v1/messages",
-
-        headers={
-            "Authorization":
-                f"Bearer {api_key}",
-
-            "Content-Type":
-                "application/json",
-
-            "HTTP-Referer":
-                "http://localhost:8501",
-
-            "X-Title":
-                "BusinessIntelligence.ai",
-        },
-
-        json={
-            "model":
-                selected_model,
-
-            "max_tokens":
-                64,
-
-            "temperature":
-                0,
-
-            "messages": [
-                {
-                    "role":
-                        "user",
-
-                    "content":
-                        "Reply with exactly: "
-                        "OPENROUTER_TEST_OK",
-                }
-            ],
-
-            "reasoning": {
-                "enabled":
-                    False
-            },
-        },
-
-        timeout=60,
-    )
-
-    if response.status_code >= 400:
-
-        raise RuntimeError(
-            f"OpenRouter smoke test HTTP "
-            f"{response.status_code}: "
-            f"{response.text}"
-        )
-
-    data = response.json()
-
-    return "".join(
-        block.get(
-            "text",
-            "",
-        )
-        for block in (
-            data.get(
-                "content",
-                [],
+                        "content":
+                            "Reply with exactly: GROQ_TEST_OK",
+                    }
+                ],
+                temperature=0,
+                max_tokens=64,
+                reasoning_effort="low",
+                include_reasoning=False,
             )
-            or []
         )
-        if (
-            isinstance(block, dict)
-            and block.get("type") == "text"
+
+        choices = getattr(
+            response,
+            "choices",
+            None,
         )
-    ).strip()
+
+        if not choices:
+            raise RuntimeError(
+                f"Groq smoke test returned no choices: {response!r}"
+            )
+
+        content = (
+            getattr(
+                choices[0].message,
+                "content",
+                None,
+            )
+            or ""
+        ).strip()
+
+        if not content:
+            raise RuntimeError(
+                f"Groq smoke test returned empty content. "
+                f"response={response!r}"
+            )
+
+        return content
+
+    if selected_provider == "openrouter":
+        api_key = os.getenv(
+            "OPENROUTER_API_KEY"
+        )
+
+        if not api_key:
+            raise RuntimeError(
+                "OPENROUTER_API_KEY is not configured."
+            )
+
+        response = requests.post(
+            "https://openrouter.ai/api/v1/messages",
+
+            headers={
+                "Authorization":
+                    f"Bearer {api_key}",
+
+                "Content-Type":
+                    "application/json",
+
+                "HTTP-Referer":
+                    "http://localhost:8501",
+
+                "X-Title":
+                    "BusinessIntelligence.ai",
+            },
+
+            json={
+                "model":
+                    selected_model,
+
+                "system":
+                    "Reply exactly with the requested test token.",
+
+                "messages": [
+                    {
+                        "role":
+                            "user",
+
+                        "content":
+                            "Reply with exactly: OPENROUTER_TEST_OK",
+                    }
+                ],
+
+                "temperature":
+                    0,
+
+                "max_tokens":
+                    32,
+
+                "reasoning": {
+                    "enabled":
+                        False,
+                },
+            },
+
+            timeout=(10, 30),
+        )
+
+        if response.status_code >= 400:
+            raise RuntimeError(
+                f"OpenRouter smoke test HTTP "
+                f"{response.status_code}: "
+                f"{response.text}"
+            )
+
+        data = response.json()
+
+        content = "".join(
+            block.get(
+                "text",
+                "",
+            )
+            for block in (
+                data.get(
+                    "content",
+                    [],
+                )
+                or []
+            )
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "text"
+            )
+        ).strip()
+
+        if not content:
+            raise RuntimeError(
+                "OpenRouter smoke test returned empty visible text. "
+                f"response={data!r}"
+            )
+
+        return content
+
+    raise RuntimeError(
+        "Smoke test supports groq and openrouter."
+    )
 
 
 def clean_generated_narrative(
@@ -2380,17 +2436,29 @@ def _generate_one_persona_candidate(
     return result
 
 
-def _race_persona_candidates(
+def _generate_persona_with_fallbacks(
     investigation,
     persona,
     candidates,
     validation_feedback=None,
 ):
     """
-    Run all configured candidates concurrently for one persona.
+    Generate one persona using the configured provider order.
 
-    The first candidate that produces a valid cleaned narrative wins.
-    A slow or failed model therefore does not block a faster fallback.
+    Provider order for the current setup:
+        1. Groq / openai/gpt-oss-120b
+        2. OpenRouter / openrouter/free
+
+    A candidate is accepted only when:
+        LLM response -> cleanup -> success
+
+    The FastAPI validation layer remains authoritative for final
+    grounding validation. Failed generation/cleanup candidates are
+    immediately skipped in favor of the next configured candidate.
+
+    IMPORTANT:
+    Providers are NOT raced concurrently. This prevents the fallback
+    provider from being called unnecessarily while the primary succeeds.
     """
 
     if not candidates:
@@ -2399,121 +2467,71 @@ def _race_persona_candidates(
         )
 
     failures = []
-    winner = None
 
-    max_workers = len(candidates)
+    for attempt, (provider, model) in enumerate(
+        candidates,
+        start=1,
+    ):
+        if LLM_DEBUG:
+            print(
+                f"[LLM ROUTER] TRY persona={persona} "
+                f"attempt={attempt} "
+                f"provider={provider} "
+                f"model={model}"
+            )
 
-    with ThreadPoolExecutor(
-        max_workers=max_workers,
-        thread_name_prefix=f"llm-{persona}",
-    ) as executor:
-
-        future_map = {
-            executor.submit(
-                _generate_one_persona_candidate,
+        try:
+            result = _generate_one_persona_candidate(
                 investigation,
                 persona,
                 provider,
                 model,
                 validation_feedback,
-            ): (
-                provider,
-                model,
             )
-            for provider, model in candidates
-        }
 
-        for future in as_completed(
-            future_map
-        ):
-
-            provider, model = future_map[
-                future
-            ]
-
-            try:
-
-                result = future.result()
-
-                winner = (
-                    provider,
-                    model,
-                    result,
+            if LLM_DEBUG:
+                print(
+                    f"[LLM ROUTER] GENERATED persona={persona} "
+                    f"provider={provider} "
+                    f"model={model}"
                 )
 
-                # Do not wait for slower candidates. Futures that have not
-                # started are cancelled; already-running HTTP requests may
-                # finish in the background but their results are ignored.
-                for other in future_map:
+            return {
+                "result": result,
+                "model_route": {
+                    "provider": provider,
+                    "model": model,
+                    "attempt": attempt,
+                    "fallback_attempts": attempt - 1,
+                    "failed_candidates_before_winner": failures,
+                },
+            }
 
-                    if other is not future:
-                        other.cancel()
+        except Exception as exc:
+            error_text = str(exc)
 
-                if LLM_DEBUG:
+            failure = {
+                "provider": provider,
+                "model": model,
+                "error": error_text,
+            }
 
-                    print(
-                        f"[LLM ROUTER] WINNER persona={persona} "
-                        f"provider={provider} model={model}"
-                    )
+            failures.append(failure)
 
-                break
-
-            except Exception as exc:
-
-                error_text = str(exc)
-
-                failures.append(
-                    {
-                        "provider":
-                            provider,
-
-                        "model":
-                            model,
-
-                        "error":
-                            error_text,
-                    }
+            if LLM_DEBUG:
+                print(
+                    f"[LLM ROUTER] FAILED persona={persona} "
+                    f"provider={provider} model={model}: "
+                    f"{error_text}"
                 )
 
-                if LLM_DEBUG:
-
-                    print(
-                        f"[LLM ROUTER] FAILED persona={persona} "
-                        f"provider={provider} model={model}: "
-                        f"{error_text}"
-                    )
-
-    if winner is None:
-
-        raise RuntimeError(
-            f"All configured LLM candidates failed for "
-            f"{persona}. "
-            + json.dumps(
-                failures,
-                ensure_ascii=False,
-            )
+    raise RuntimeError(
+        f"All configured LLM candidates failed for {persona}. "
+        + json.dumps(
+            failures,
+            ensure_ascii=False,
         )
-
-    provider, model, result = winner
-
-    return {
-        "result":
-            result,
-
-        "model_route": {
-            "provider":
-                provider,
-
-            "model":
-                model,
-
-            "parallel_candidates":
-                len(candidates),
-
-            "failed_candidates_before_winner":
-                failures,
-        },
-    }
+    )
 
 
 def generate_event_narratives(
@@ -2521,15 +2539,14 @@ def generate_event_narratives(
     validation_feedback=None,
 ):
     """
-    Generate Executive + Operations narratives using concurrent candidate
-    racing.
+    Generate Executive and Operations narratives independently.
 
-    IMPORTANT:
-    - Candidates are NOT tried serially.
-    - A slow/failed primary therefore does not add its timeout to the
-      successful fallback.
-    - Executive and Operations race independently.
-    - The first successful, cleaned narrative wins for each persona.
+    Current production route:
+        Groq GPT-OSS 120B
+            -> OpenRouter/free
+
+    Executive and Operations run in parallel with each other.
+    Within each persona, provider fallback is strictly sequential.
     """
 
     load_dotenv()
@@ -2541,7 +2558,6 @@ def generate_event_narratives(
     )
 
     if event_id is None:
-
         raise ValueError(
             "Selected-event investigation is missing event_id."
         )
@@ -2549,20 +2565,17 @@ def generate_event_narratives(
     candidates = configured_model_candidates()
 
     if not candidates:
-
         raise RuntimeError(
             "No LLM candidates are configured."
         )
 
-    # Two persona races are also independent. This means Operations does not
-    # wait for Executive, and vice versa.
     with ThreadPoolExecutor(
         max_workers=2,
         thread_name_prefix="llm-persona",
     ) as executor:
 
         executive_future = executor.submit(
-            _race_persona_candidates,
+            _generate_persona_with_fallbacks,
             investigation,
             "executive",
             candidates,
@@ -2570,7 +2583,7 @@ def generate_event_narratives(
         )
 
         operations_future = executor.submit(
-            _race_persona_candidates,
+            _generate_persona_with_fallbacks,
             investigation,
             "operations",
             candidates,
@@ -2578,7 +2591,6 @@ def generate_event_narratives(
         )
 
         try:
-
             executive_package = (
                 executive_future.result()
             )
@@ -2588,29 +2600,19 @@ def generate_event_narratives(
             )
 
         except Exception:
-
-            # Ensure the other task is no longer queued before propagating.
             executive_future.cancel()
             operations_future.cancel()
             raise
-
-    executive = executive_package[
-        "result"
-    ]
-
-    operations = operations_package[
-        "result"
-    ]
 
     return {
         "event_id":
             event_id,
 
         "executive":
-            executive,
+            executive_package["result"],
 
         "operations":
-            operations,
+            operations_package["result"],
 
         "generated":
             True,
@@ -2620,14 +2622,10 @@ def generate_event_narratives(
 
         "model_route": {
             "executive":
-                executive_package[
-                    "model_route"
-                ],
+                executive_package["model_route"],
 
             "operations":
-                operations_package[
-                    "model_route"
-                ],
+                operations_package["model_route"],
         },
     }
 
