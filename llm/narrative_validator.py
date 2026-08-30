@@ -3,7 +3,6 @@ import json
 import re
 import sys
 
-
 # ============================================================
 # WINDOWS / UTF-8 OUTPUT
 # ============================================================
@@ -19,7 +18,6 @@ if hasattr(sys.stderr, "reconfigure"):
         encoding="utf-8",
         errors="replace",
     )
-
 
 # ============================================================
 # PATHS
@@ -48,7 +46,6 @@ OPERATIONS_PATH = (
     / "operations_story.json"
 )
 
-
 # ============================================================
 # LOAD JSON
 # ============================================================
@@ -74,7 +71,6 @@ def load_json(path):
         raise RuntimeError(
             f"Invalid JSON file:\n{path}"
         ) from exc
-
 
 # ============================================================
 # PARSE NUMERIC CLAIMS
@@ -308,7 +304,6 @@ def extract_numeric_claims(text):
         )
     )   
 
-
 def parse_numeric_claim(raw):
 
     cleaned = (
@@ -353,7 +348,6 @@ def parse_numeric_claim(raw):
         return None
 
     return value, is_percent
-
 
 # ============================================================
 # BUILD ALLOWED SOURCE FACTS
@@ -1205,7 +1199,6 @@ def validate_uncertainty(
             found,
     }
 
-
 # ============================================================
 # CURRENCY VALIDATION
 # ============================================================
@@ -1288,7 +1281,6 @@ def validate_currency(
             violations,
     }
 
-
 # ============================================================
 # CAUSAL LANGUAGE VALIDATION
 # ============================================================
@@ -1345,7 +1337,6 @@ def validate_causal_language(
         "forbidden_phrases":
             found,
     }
-
 
 # ============================================================
 # DRIVER CLAIM VALIDATION
@@ -1423,7 +1414,6 @@ def validate_driver_claims(
         "violations":
             violations,
     }
-
 
 # ============================================================
 # STORY PRESENCE
@@ -1596,7 +1586,6 @@ def save_validation(
     )
 
     return path
-
 
 # ============================================================
 # MAIN
