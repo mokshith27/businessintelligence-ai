@@ -1246,7 +1246,6 @@ else:
 
 st.divider()
 
-
 # ============================================================
 
 # ============================================================
@@ -2328,7 +2327,6 @@ with e4:
         ),
     )
 
-
 # ============================================================
 # KPI SEMANTIC CONTRACT
 # ============================================================
@@ -2422,7 +2420,6 @@ with st.expander(
         "currency, and intended access roles before analytical results are interpreted."
     )
 
-
 # ============================================================
 # LINEAGE
 # ============================================================
@@ -2469,7 +2466,6 @@ with st.expander(
         )
     )
 
-
 # ============================================================
 # LLM GOVERNANCE
 # ============================================================
@@ -2509,7 +2505,6 @@ with st.expander(
             [],
         )
     )
-
 
 # ============================================================
 # TELEMETRY
@@ -2670,7 +2665,6 @@ with st.expander(
                 validation
             )
 
-
 # ============================================================
 # EVENT HISTORY
 # ============================================================
@@ -2686,7 +2680,6 @@ with st.expander(
             width="stretch",
             hide_index=True,
         )
-
 
 # ============================================================
 # FOOTER
@@ -2944,7 +2937,6 @@ with st.expander(
         # Use supplied summary when available, otherwise
         # calculate it from the normalized scenario records.
         # ----------------------------------------------------
-
         summary = (
             dict(
                 provided_summary
@@ -3064,7 +3056,6 @@ with st.expander(
         # ----------------------------------------------------
         # Summary metrics
         # ----------------------------------------------------
-
         evaluated_value = summary.get(
             "scenarios_evaluated",
             len(normalized_results),
@@ -3164,7 +3155,6 @@ with st.expander(
                 "Average score",
                 score_display,
             )
-
         # ----------------------------------------------------
         # Scenario table
         # ----------------------------------------------------
@@ -3215,7 +3205,6 @@ with st.expander(
             "Controlled scenario validation data could not "
             "be loaded from the backend."
         )
-
     # ========================================================
     # SPARSE HISTORY
     # ========================================================
@@ -3227,7 +3216,6 @@ with st.expander(
     )
 
     if sparse:
-
         # ----------------------------------------------------
         # Actual sparse scenario structure:
         #
@@ -3331,7 +3319,6 @@ with st.expander(
         st.warning(
             "Sparse-history validation data are unavailable."
         )
-
     # ========================================================
     # CAUSAL VALIDATION
     # ========================================================
@@ -3537,7 +3524,6 @@ with st.expander(
             st.warning(
                 "Causal evidence is not fully production-ready."
             )
-
     # ========================================================
     # FEEDBACK CALIBRATION
     # ========================================================
@@ -3622,7 +3608,6 @@ with st.expander(
 # ============================================================
 # FOOTER
 # ============================================================
-
 st.divider()
 
 st.caption(
