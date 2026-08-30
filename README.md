@@ -517,12 +517,22 @@ Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 
 | Method | Endpoint | Purpose |
 |---|---|---|
+| `GET` | `/` | Service root: application info |
+| `GET` | `/api/health` | Service health check |
 | `GET` | `/api/insights/latest` | Canonical insight |
 | `GET` | `/api/insights/latest/executive` | Executive view of latest insight |
 | `GET` | `/api/insights/latest/operations` | Operations view of latest insight |
+| `GET` | `/api/insights/latest/validation` | Narrative validation report for the latest insight |
 | `GET` | `/api/insights/role?role=executive\|operations\|analyst` | Role-filtered insight |
-| `GET` | `/api/actions` | Recommended actions |
+| `GET` | `/api/kpis` | KPI values and movements |
 | `GET` | `/api/events` | Detected KPI events |
+| `GET` | `/api/insights/event/{event_id}` | Full event investigation (drivers, evidence, confidence) |
+| `POST` | `/api/insights/event/{event_id}/narrative` | Generate and validate an evidence-grounded event narrative |
+| `GET` | `/api/drivers` | GMV decomposition and segment driver contributions |
+| `GET` | `/api/customer-experience-kpis` | Customer-experience KPIs from review data |
+| `GET` | `/api/review-evidence` | Review evidence for an event window |
+| `GET` | `/api/actions` | Recommended actions |
+| `GET` | `/api/telemetry` | LLM telemetry: latency, token usage, model calls, cost |
 | `POST` | `/api/feedback` | Submit analyst feedback |
 | `GET` | `/api/feedback` | List feedback records |
 | `GET` | `/api/calibration` | Feedback calibration report |
