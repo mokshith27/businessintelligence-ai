@@ -27,6 +27,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      - name: Lint (ruff)
+        run: |
+          ruff check .
+          echo "ruff OK"
+
       - name: Compile check (py_compile all modules)
         run: |
           python -m compileall -q api dashboard drivers evidence llm personas scenarios actions anomaly causal feedback ingestion materiality nlp security telemetry roi evaluation

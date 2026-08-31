@@ -50,3 +50,6 @@ temp/
 data/incoming/
 data/realtime/
 data/insights/multi_kpi_status.json
+
+# Generated evaluation artifacts (rebuild with: python evaluation/run_evaluation.py)
+data/evaluation/

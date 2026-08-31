@@ -1,0 +1,36 @@
+[project]
+name = "businessintelligence-ai"
+version = "1.0.0"
+description = "Decision intelligence for marketplace operations: KPI movement to evidence-backed action."
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+readme = "README.md"
+
+# ------------------------------------------------------------
+# Ruff (lint) — CI enforces `ruff check .`
+# Scoped to correctness rules (syntax errors, undefined
+# names, duplicate args) so it guards without style churn.
+# ------------------------------------------------------------
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+exclude = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    "data",
+    "docs",
+]
+
+[tool.ruff.lint]
+select = [
+    "E9",  # syntax errors / indentation
+    "F63", # invalid string comparisons (x == y == z misuse)
+    "F7",  # syntax errors in type annotations / forward refs
+    "F82", # undefined names — real bugs caught cheaply
+    "F811", # redefinition of unused name
+]
+
+[tool.ruff.lint.per-file-ignores]
+# dashboard/app.py is a single-file Streamlit app; allow its conventions
+"dashboard/app.py" = ["F811"]

@@ -4,3 +4,7 @@
 pytest==9.1.1
 pytest-cov==7.0.0
 httpx>=0.28
+
+# lint / formatting (CI + pre-commit)
+ruff==0.9.6
+pre-commit>=4.0

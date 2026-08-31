@@ -39,7 +39,18 @@ The project is designed around one core principle:
 
 ## 📑 Table of Contents
 
-1. [What the Project Does](#1-what-the-project-does)
+| | | |
+|---|---|---|
+| [1. What the Project Does](#1-what-the-project-does) | [2. Key Capabilities](#2-key-capabilities) | [3. System Architecture](#3-system-architecture) |
+| [4. Tech Stack](#4-tech-stack) | [5. Project Structure](#5-project-structure) | [6. Getting Started](#6-getting-started--step-by-step) |
+| [7. Environment Variables](#7-environment-variables-reference-env) | [8. Analytical Pipeline](#8-the-analytical-pipeline) | [9. Generated Artifacts](#9-generated-artifacts) |
+| [10. API Reference](#10-api-reference) | [11. Dashboard](#11-dashboard) | [12. LLM Layer & Governance](#12-llm-layer--narrative-governance) |
+| [13. NLP / Sentiment](#13-nlp--sentiment-layer) | [14. Causal Analysis](#14-causal-analysis) | [15. Sparse-History Safety](#15-sparse-history-safety) |
+| [16. Scenario Evaluation](#16-controlled-scenario-evaluation) | [17. Role-Based Security](#17-role-based-security) | [18. Feedback Loop](#18-human-in-the-loop-feedback) |
+| [19. Validation Philosophy](#19-validation-philosophy) | [20. Design Principles](#20-design-principles) | [21. Troubleshooting](#21-troubleshooting) |
+| [22. Known Limitations](#22-known-limitations) | [23. Documentation](#23-documentation--navigation) | |
+
+**Quick links:** 🎤 [3-minute demo script](docs/DEMO_SCRIPT.md) · 📖 [Getting started](docs/GETTING_STARTED.md) · 🏗️ [Architecture](docs/ARCHITECTURE.md) · 📊 [Measured LLM quality](#12-llm-layer--narrative-governance)
 
 ---
 
@@ -662,6 +673,30 @@ Supported providers:
 - **groq** — Groq SDK (e.g. `openai/gpt-oss-120b`)
 - **openrouter** — OpenRouter (e.g. `openrouter/free`)
 
+### Measured quality (not claims)
+
+The evaluation harness (`evaluation/run_evaluation.py`) seeds hallucinations into real
+narratives and measures whether the validator catches them, then reports acceptance,
+calibration, and per-narrative telemetry:
+
+<p align="center">
+  <img src="docs/img/evaluation.svg" alt="Measured narrative governance: 12/12 seeded hallucinations caught, 100% validator pass rate, ~$0.0005 per grounded narrative" width="860">
+</p>
+
+Highlights:
+
+- **12 / 12 seeded hallucinations caught** across 6 checks (numbers, statuses, uncertainty,
+  currency, causal language, driver claims) — precision 1.00, recall 1.00, zero false positives
+  on clean narratives.
+- **≈ $0.0005 and 2.3 s per grounded narrative** — evidence-grounded governance at negligible
+  marginal cost (≈ $0.52 per 1,000 narratives).
+- Feedback calibration (ECE) is **measured and governed by an explicit policy**: small feedback
+  samples never automatically override production confidence.
+
+Reproduce it yourself: `python evaluation/run_evaluation.py` (writes
+`data/evaluation/evaluation_report.json`).
+
+
 ### Option A — Fully local (default, no API key)
 
 ```powershell
@@ -877,7 +912,10 @@ curl -X POST http://localhost:8000/api/auth/login \
   -d '{"username": "maria.exec", "password": "demo-exec-2026"}'
 ```
 
-The prototype implements application-level information filtering (not enterprise SSO/JWT/RBAC).
+Role filtering is exposed through `/api/insights/role` and can be self-audited via
+`GET /api/security/test`, which replays the same insight through all three role filters
+and reports exactly what each role may and may not see — a one-request demonstration of
+data governance for reviewers.
 
 ### Executive
 - **Receives:** KPI, movement, event, top drivers, confidence, actions, executive narrative.
