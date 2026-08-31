@@ -108,6 +108,206 @@ def api_post(
         return None
 
 # ============================================================
+# AUTHENTICATION (JWT LOGIN / LOGOUT)
+# ============================================================
+
+# Demo accounts — one per role. Passwords are the documented
+# demo values (README §17); the API hashes them with PBKDF2
+# and returns a signed JWT on successful login.
+DEMO_ACCOUNTS = {
+    "Executive": {
+        "username": "maria.exec",
+        "password": "demo-exec-2026",
+        "label": "Executive",
+    },
+    "Operations": {
+        "username": "joao.ops",
+        "password": "demo-ops-2026",
+        "label": "Operations",
+    },
+    "Analyst": {
+        "username": "ana.analyst",
+        "password": "demo-analyst-2026",
+        "label": "Analyst",
+    },
+}
+
+
+def api_login(username, password):
+    """
+    Authenticate against POST /api/auth/login.
+
+    Returns the response dict on success, None on failure.
+    Deliberately separate from api_post() so 401s surface as
+    an inline login error instead of a global banner.
+    """
+
+    try:
+
+        response = requests.post(
+            f"{API_BASE_URL}/api/auth/login",
+            json={
+                "username": username,
+                "password": password,
+            },
+            timeout=15,
+        )
+
+        if response.status_code == 200:
+            return response.json()
+
+        detail = "Invalid username or password"
+
+        try:
+            detail = response.json().get("detail", detail)
+        except Exception:
+            pass
+
+        st.error(f"Login failed: {detail}")
+
+        return None
+
+    except requests.exceptions.RequestException as exc:
+
+        st.error(f"Backend connection failed: {exc}")
+
+        return None
+
+
+def logout():
+
+    st.session_state.pop("auth_token", None)
+    st.session_state.pop("auth_user", None)
+
+
+if "auth_token" not in st.session_state:
+    st.session_state.auth_token = None
+
+if "auth_user" not in st.session_state:
+    st.session_state.auth_user = None
+
+auth_token = st.session_state.auth_token
+auth_user = st.session_state.auth_user
+
+
+# ------------------------------------------------------------
+# LOGIN GATE — the dashboard renders only for signed-in users
+# ------------------------------------------------------------
+
+if not auth_token or not auth_user:
+
+    with st.container():
+
+        st.title("📊 BusinessIntelligence.ai")
+
+        st.caption(
+            "Decision intelligence for marketplace "
+            "operations teams — sign in to continue"
+        )
+
+        st.divider()
+
+        st.subheader("Sign in")
+
+        with st.form("login_form"):
+
+            login_username = st.text_input(
+                "Username",
+                key="login_username",
+            )
+
+            login_password = st.text_input(
+                "Password",
+                type="password",
+                key="login_password",
+            )
+
+            login_submitted = st.form_submit_button(
+                "Sign in",
+                type="primary",
+                use_container_width=True,
+            )
+
+        if login_submitted:
+
+            login_result = api_login(
+                login_username.strip(),
+                login_password,
+            )
+
+            if login_result:
+
+                st.session_state.auth_token = (
+                    login_result.get("access_token")
+                )
+
+                st.session_state.auth_user = (
+                    login_result.get("user", {})
+                )
+
+                st.rerun()
+
+        st.divider()
+
+        st.caption(
+            "Demo accounts — one per role. "
+            "Click to sign in with the dummy credentials:"
+        )
+
+        demo_col_1, demo_col_2, demo_col_3 = st.columns(3)
+
+        for demo_col, demo_role in zip(
+            (demo_col_1, demo_col_2, demo_col_3),
+            ("Executive", "Operations", "Analyst"),
+        ):
+
+            account = DEMO_ACCOUNTS[demo_role]
+
+            with demo_col:
+
+                if st.button(
+                    demo_role,
+                    key=f"demo_login_{demo_role}",
+                    use_container_width=True,
+                ):
+
+                    demo_result = api_login(
+                        account["username"],
+                        account["password"],
+                    )
+
+                    if demo_result:
+
+                        st.session_state.auth_token = (
+                            demo_result.get("access_token")
+                        )
+
+                        st.session_state.auth_user = (
+                            demo_result.get("user", {})
+                        )
+
+                        st.rerun()
+
+        with st.expander("Demo credentials"):
+
+            st.markdown(
+                "| Role | Username | Password |\n"
+                "|---|---|---|\n"
+                "| Executive | `maria.exec` | `demo-exec-2026` |\n"
+                "| Operations | `joao.ops` | `demo-ops-2026` |\n"
+                "| Analyst | `ana.analyst` | `demo-analyst-2026` |"
+            )
+
+            st.caption(
+                "Authentication is JWT-based (HS256, 8h expiry) "
+                "and enforced by the FastAPI backend — see "
+                "README §17."
+            )
+
+    st.stop()
+
+
+# ============================================================
 # STORY RENDERER
 # ============================================================
 
@@ -401,16 +601,14 @@ with st.sidebar:
 
     st.divider()
 
-    role = st.radio(
-        "Role",
-        [
-            "Executive",
-            "Operations",
-            "Analyst",
-        ],
-    )
+    # Role comes from the authenticated account (JWT claim),
+    # not from a free-choice radio — logging in as a persona
+    # IS the role selection.
+    role_key = str(
+        auth_user.get("role", "executive")
+    ).lower()
 
-    role_key = role.lower()
+    role = role_key.capitalize()
 
     buyer_persona = {
         "Executive": "Head of Marketplace Operations",
@@ -419,9 +617,25 @@ with st.sidebar:
     }
 
     st.caption(
-        "You are viewing as: "
-        f"**{buyer_persona.get(role, role)}**"
+        f"Signed in as **{auth_user.get('username', 'unknown')}**"
     )
+
+    st.caption(
+        f"{auth_user.get('full_name', '')}".strip()
+        or f"You are viewing as: **{buyer_persona.get(role, role)}**"
+    )
+
+    st.caption(
+        f"Role: **{buyer_persona.get(role, role)}** · "
+        "JWT session active"
+    )
+
+    if st.button(
+        "🚪 Log out",
+        on_click=logout,
+        use_container_width=True,
+    ):
+        pass
 
     st.divider()
 

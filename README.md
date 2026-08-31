@@ -896,6 +896,8 @@ Average score         : 1.000
 
 **JWT authentication is now enforced at the API level** (in addition to the application-level role filtering below). `/api/auth/login` issues a signed HS256 token (role claim, 8h expiry); `/api/auth/me` validates it. Set `AUTH_DISABLED=1` in `.env` to bypass auth for local development — it is **enabled by default**.
 
+**The dashboard enforces this end-to-end**: the Streamlit UI opens with a login gate that authenticates against `/api/auth/login` (form + one-click demo buttons for each role). The session role is derived from the JWT's role claim — not a free-choice selector — and the sidebar shows the signed-in identity with a **Log out** button that clears the session.
+
 **Demo users** (passwords are for the demo only; production would use SSO / an identity provider):
 
 | Username | Password | Role | Persona |
