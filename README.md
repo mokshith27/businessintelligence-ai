@@ -184,7 +184,8 @@ Analysts classify an assessment as `CORRECT`, `INCORRECT`, or `MISSING_CONTEXT`.
 | Data processing | **pandas**, **NumPy**, **SciPy** | KPI construction, decomposition, statistics |
 | Machine learning | **scikit-learn** | Clustering, propensity models |
 | NLP / sentiment | **Hugging Face Transformers**, **PyTorch**, **SentencePiece** | Multilingual aspect-level review sentiment |
-| LLM narratives | **Groq SDK** (+ OpenRouter fallback) | Evidence-grounded story generation |
+| LLM narratives | **Provider router**: Groq, OpenRouter, or local OpenAI-compatible server (Ollama / LM Studio / llama.cpp / vLLM) | Evidence-grounded story generation |
+| Default LLM config | **Local `qwen3:1.7b` via Ollama** (no key required), cloud fallbacks available | Fully local, private inference |
 | API | **FastAPI**, **Uvicorn**, **Pydantic** | Insight/action/feedback serving layer |
 | Dashboard | **Streamlit**, **Plotly** | Role-based decision workspace |
 | Configuration | **python-dotenv** | `.env`-based secret & LLM configuration |
@@ -565,7 +566,61 @@ Available at `http://localhost:8501`. The dashboard provides:
 
 ## 12. LLM Layer & Narrative Governance
 
-The story generator (`llm/story_generator.py`) uses an OpenAI-compatible Groq endpoint (with OpenRouter fallback) and records telemetry such as:
+The story generator (`llm/story_generator.py`) implements a **provider router**
+that tries candidates in order and accepts the first output that passes the
+section cleaner:
+
+```text
+primary provider  →  fallback 1  →  fallback 2  →  ...
+```
+
+Supported providers:
+- **local** — a local OpenAI-compatible inference server (Ollama by default)
+- **groq** — Groq SDK (e.g. `openai/gpt-oss-120b`)
+- **openrouter** — OpenRouter (e.g. `openrouter/free`)
+
+### Option A — Fully local (default, no API key)
+
+```powershell
+ollama pull qwen3:1.7b
+```
+
+Configure `.env`:
+
+```text
+LLM_PROVIDER=local
+LLM_MODEL=qwen3:1.7b
+LLM_BASE_URL=http://localhost:11434/v1
+LLM_LOCAL_API_MODE=ollama
+LLM_LOCAL_NUM_CTX=8192
+LLM_FALLBACKS=local:qwen3:4b
+```
+
+Notes:
+- Qwen3 is a thinking model; the router disables visible reasoning via
+  Ollama's native `/api/chat` endpoint so the full token budget goes to the
+  governed narrative.
+- After a CUDA out-of-memory failure the router automatically forces
+  full-CPU inference for subsequent local requests instead of crashing.
+- Keep `LLM_LOCAL_NUM_CTX` at **8192 or above**: the narrative prompts are
+  ~4,000 tokens (see Troubleshooting).
+
+### Option B — Cloud providers
+
+```powershell
+# Groq
+$env:LLM_PROVIDER="groq"
+$env:LLM_MODEL="openai/gpt-oss-120b"
+$env:GROQ_API_KEY="your_key_here"
+
+# OpenRouter
+$env:LLM_PROVIDER="openrouter"
+$env:OPENROUTER_API_KEY="your_key_here"
+```
+
+Or put the values in a local `.env` file (copy `.env.example`).
+
+Example telemetry recorded for every call:
 
 ```json
 {
@@ -796,7 +851,33 @@ This prevents the LLM from silently becoming the source of quantitative truth.
 
 ## 21. Troubleshooting
 
+### Narrative endpoint returns 500 with `contains no required sections`
+
+The local model context window (`LLM_LOCAL_NUM_CTX`) is too small. The
+narrative prompts are ~4,000 tokens; a window of 2048 makes Ollama truncate
+the prompt, cutting off the output-format instructions. The model then omits
+the required section headings and the section cleaner rejects every candidate.
+
+Fix:
+
+```text
+LLM_LOCAL_NUM_CTX=8192
+```
+
+and restart the API. You can verify prompt size versus context window by
+checking `prompt_eval_count` in an Ollama `/api/chat` response.
+
+### AI narrative rejected by the evidence-grounding validator
+
+Rejections are intentional governance behavior: the validator refuses
+narratives that state numbers, statuses, or causal claims not present in the
+deterministic evidence. Small local models occasionally hallucinate a figure;
+the API retries with validator feedback before giving up. Re-run the
+generation, or switch to a larger `LLM_MODEL` if rejections are frequent.
+
 ### `GROQ_API_KEY is not set`
+Only required when `LLM_PROVIDER=groq`. For the default fully local setup no
+API key is needed. For cloud providers set the matching key:
 Set it via your `.env` file (preferred) or for the current PowerShell session:
 
 ```powershell
