@@ -1,0 +1,6 @@
+# Force LF for shell scripts — CRLF breaks the Docker entrypoint in Linux containers
+*.sh text eol=lf
+*.py text
+*.md text
+*.yml text
+*.yaml text

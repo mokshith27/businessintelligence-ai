@@ -1,0 +1,113 @@
+name: businessintelligence-ai
+
+# ------------------------------------------------------------------
+# One-command deployment for judges / reviewers:
+#
+#   docker compose up --build
+#
+# Spins up the FastAPI backend + Streamlit dashboard on a shared
+# network. A warehouse is seeded on first run (deterministic data).
+#
+#   Dashboard   : http://localhost:8501
+#   API/Swagger : http://localhost:8000/docs
+#
+# Optional fully-private LLM via a local Ollama service:
+#   docker compose --profile llm up --build
+# ------------------------------------------------------------------
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: businessintelligence-ai:latest
+    container_name: bi_ai_api
+    command: >
+      sh -c "uvicorn api.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LLM_PROVIDER=${LLM_PROVIDER:-local}
+      - LLM_MODEL=${LLM_MODEL:-qwen3:1.7b}
+      - LLM_BASE_URL=${LLM_BASE_URL:-http://ollama:11434/v1}
+      - LLM_LOCAL_API_MODE=${LLM_LOCAL_API_MODE:-ollama}
+      - LLM_LOCAL_NUM_CTX=${LLM_LOCAL_NUM_CTX:-8192}
+      - LLM_FALLBACKS=${LLM_FALLBACKS:-local:qwen3:4b}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      - bi_ai_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: businessintelligence-ai:latest
+    container_name: bi_ai_dashboard
+    command: >
+      sh -c "streamlit run dashboard/app.py --server.port 8501 --server.address 0.0.0.0 --server.headless true"
+    depends_on:
+      - api
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "8501:8501"
+    volumes:
+      - bi_ai_data:/app/data
+    restart: unless-stopped
+
+# ------------------------------------------------------------------
+  # Fully-local LLM provider (optional; enabled with --profile llm).
+  # Pulls qwen3:1.7b on first start (~1.4 GB). GPU passthrough is
+  # environment-specific; CPU inference is slow but works.
+  # ------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bi_ai_ollama
+    profiles: ["llm"]
+    command: serve
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: bi_ai_ollama_init
+    profiles: ["llm"]
+    depends_on:
+      - ollama
+    entrypoint: /bin/sh
+    command: >
+      -c "sleep 8; ollama pull ${LLM_MODEL:-qwen3:1.7b} || exit 0"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: "no"
+
+  ollama-init-fallback:
+    image: ollama/ollama:latest
+    container_name: bi_ai_ollama_init_fallback
+    profiles: ["llm"]
+    depends_on:
+      - ollama
+      - ollama-init
+    entrypoint: /bin/sh
+    command: >
+      -c "sleep 8; ollama pull ${LLM_FALLBACK_MODEL:-qwen3:4b} || exit 0"
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: "no"
+
+volumes:
+  bi_ai_data:
+  ollama_models:

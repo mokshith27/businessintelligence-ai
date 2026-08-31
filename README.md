@@ -30,6 +30,8 @@ The project is designed around one core principle:
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
   <img src="https://img.shields.io/badge/DuckDB-FFF100?logo=duckdb&logoColor=black" alt="DuckDB">
+  <img src="https://img.shields.io/badge/tests-37%20passed-2ea44f" alt="37 tests passing">
+  <img src="https://github.com/mokshith27/businessintelligence-ai/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/status-prototype-orange" alt="Status: prototype">
 </p>
 
@@ -408,6 +410,30 @@ python run_pipeline.py             # build all artifacts
 uvicorn api.main:app --reload      # terminal 1
 streamlit run dashboard/app.py     # terminal 2
 ```
+
+### One-command Docker deployment (for judges / reviewers)
+
+The whole stack ships as a Docker Compose app. The warehouse is seeded
+automatically on first run (the deterministic pipeline, excluding the
+runtime LLM step), so a reviewer gets a working dashboard + API with a
+single command:
+
+```bash
+docker compose up --build
+```
+
+- Dashboard → http://localhost:8501
+- API / Swagger → http://localhost:8000/docs
+
+Optional: enable a fully-local Ollama provider for private AI narratives:
+
+```bash
+docker compose --profile llm up --build
+```
+
+Environment overrides (e.g. cloud keys) are read from your `.env` file
+via the compose `environment:` substitutions. Container data persists in
+Docker volumes, so restarts are instant once seeded.
 
 ---
 

@@ -1,0 +1,39 @@
+# Git & VCS
+.git
+.gitignore
+.github
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pth
+.venv/
+venv/
+env/
+
+# Secrets (never include the real .env)
+.env
+.env.*
+!.env.example
+
+# Tests / tooling
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# Generated data (warehouse, insights, logs)
+data/warehouse/
+data/roi/
+*.log
+*.duckdb
+
+# Local OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker maintenance
+docker-compose.override.yml
