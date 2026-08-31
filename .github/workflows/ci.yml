@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11", "3.13"]
+        # Pinned deps (numpy==2.5.2, scipy==1.18.1) require Python >=3.12,
+        # so 3.11 is intentionally not tested here.
+        python-version: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -27,7 +29,7 @@ jobs:
 
       - name: Compile check (py_compile all modules)
         run: |
-          python -m compileall -q api dashboard drivers evidence llm personas scenarios actions anomaly causal feedback ingestion materiality nlp security telemetry
+          python -m compileall -q api dashboard drivers evidence llm personas scenarios actions anomaly causal feedback ingestion materiality nlp security telemetry roi
           echo "compileall OK"
 
       - name: Run tests

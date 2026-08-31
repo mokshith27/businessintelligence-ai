@@ -26,7 +26,7 @@ The project is designed around one core principle:
 > **The analytical layer determines the truth; the LLM explains that truth.**
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
   <img src="https://img.shields.io/badge/DuckDB-FFF100?logo=duckdb&logoColor=black" alt="DuckDB">
@@ -258,7 +258,7 @@ Follow these steps in order. Every command assumes **Windows PowerShell** from t
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Python | **3.10+** | 3.11/3.12 recommended |
+| Python | **3.12+** | 3.13 also supported; pinned deps (`numpy`, `scipy`) require ≥3.12 |
 | pip | latest | ships with Python |
 | Git | any recent | to clone the repository |
 | LLM API key | Groq and/or OpenRouter | required only for narrative generation |
