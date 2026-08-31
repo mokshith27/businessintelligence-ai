@@ -956,13 +956,6 @@ This project is a decision-intelligence **prototype**, not a production enterpri
 
 ---
 
-## 24. License
-
-Add the project's intended license here before publishing publicly. For example:
-
-```text
-MIT License
-```
 
 only if that is the license you choose for the repository.
 
@@ -988,4 +981,4 @@ only if that is the license you choose for the repository.
 21. [Troubleshooting](#21-troubleshooting)
 22. [Known Limitations](#22-known-limitations)
 23. [Documentation & Navigation](#23-documentation--navigation)
-24. [License](#24-license)
+
