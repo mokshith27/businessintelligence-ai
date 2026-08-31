@@ -3,6 +3,7 @@ import json
 import os
 import re
 import time
+import ast
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -76,6 +77,111 @@ REASONING_EFFORT = os.getenv(
 
 INCLUDE_REASONING = False
 
+# Base URL of a local OpenAI-compatible inference server.
+# Defaults to Ollama (http://localhost:11434/v1).
+# LM Studio: http://localhost:1234/v1
+# llama.cpp server / vLLM: their respective /v1 endpoints.
+LOCAL_LLM_BASE_URL = os.getenv(
+    "LLM_BASE_URL",
+    "http://localhost:11434/v1",
+).strip().rstrip("/")
+
+# Request mode for the local provider:
+#   - "ollama": native Ollama /api/chat with thinking disabled
+#     (recommended for Qwen3; reasoning cannot be disabled on
+#     Ollama's OpenAI-compatible endpoint).
+#   - "openai": generic OpenAI-compatible /v1/chat/completions
+#     (LM Studio, llama.cpp server, vLLM, ...).
+LOCAL_LLM_API_MODE = os.getenv(
+    "LLM_LOCAL_API_MODE",
+    "ollama",
+).strip().lower()
+
+# Sampling temperature for the local model only.
+# Qwen3 (non-thinking mode) is tuned for ~0.6-0.7; the global
+# 0.1 setting makes small local models unusually terse.
+LOCAL_LLM_TEMPERATURE = float(
+    os.getenv(
+        "LLM_LOCAL_TEMPERATURE",
+        "0.6",
+    )
+)
+
+# Repetition penalty for the local model. Qwen3 8B can fall into
+# repeating one section until the token budget is exhausted.
+# Ollama default is 1.1; 1.2-1.3 actively prevents loop stalls.
+LOCAL_LLM_REPEAT_PENALTY = float(
+    os.getenv(
+        "LLM_LOCAL_REPEAT_PENALTY",
+        "1.3",
+    )
+)
+
+# Context window for the local model. The CUDA compute/KV buffers
+# scale with this value, so large contexts can exhaust small-VRAM
+# GPUs (e.g. 6GB laptop GPUs) at model load time.
+LOCAL_LLM_NUM_CTX = int(
+    os.getenv(
+        "LLM_LOCAL_NUM_CTX",
+        "4096",
+    )
+)
+
+# Sticky CPU-inference switch for the local provider. Set to True
+# after a CUDA out-of-memory failure so subsequent local requests
+# run fully on CPU (slow but reliable) instead of crashing
+# llama-server again.
+_LOCAL_FORCE_CPU = False
+
+
+def _is_vram_oom_error(error_text):
+    """
+    Detect GPU out-of-memory failures reported by the local
+    inference server (llama-server / Ollama).
+    """
+
+    lowered = (error_text or "").lower()
+
+    return (
+        "out of memory" in lowered
+        or "cuda0 buffer" in lowered
+        or "cudamalloc" in lowered
+        or "llama-server process has terminated" in lowered
+    )
+
+
+def _build_local_ollama_options(
+    temperature=None,
+    num_predict=None,
+):
+    """
+    Build Ollama option overrides for local inference requests.
+
+    VRAM-aware: once a CUDA out-of-memory error has been seen, all
+    local requests force full CPU inference (num_gpu: 0) so
+    generation still completes on small-VRAM GPUs.
+    """
+
+    options = {
+        "temperature": (
+            LOCAL_LLM_TEMPERATURE
+            if temperature is None
+            else temperature
+        ),
+        "num_predict": (
+            MAX_OUTPUT_TOKENS
+            if num_predict is None
+            else num_predict
+        ),
+        "repeat_penalty": LOCAL_LLM_REPEAT_PENALTY,
+        "num_ctx": LOCAL_LLM_NUM_CTX,
+    }
+
+    if _LOCAL_FORCE_CPU:
+        options["num_gpu"] = 0
+
+    return options
+
 LLM_DEBUG = os.getenv(
     "LLM_DEBUG",
     "true",
@@ -101,6 +207,12 @@ def get_llm_configuration():
 
         "fallbacks":
             LLM_FALLBACKS.copy(),
+
+        "local_base_url":
+            LOCAL_LLM_BASE_URL,
+
+        "local_api_mode":
+            LOCAL_LLM_API_MODE,
 
         "openrouter_key_configured":
             bool(
@@ -1254,7 +1366,8 @@ Correct ONLY the issues listed below. Do not invent new facts.
 """
 
     return f"""
-Create a concise executive KPI story for the SELECTED EVENT.
+Create a detailed, evidence-grounded executive KPI story for
+the SELECTED EVENT.
 
 Use ONLY the supplied structured evidence package.
 
@@ -1284,38 +1397,83 @@ Display monetary values with "R$".
 Never use "$".
 Never convert currency.
 
-Required format:
+Required format.
+
+OUTPUT EXACTLY THESE SEVEN SECTIONS, IN THIS ORDER.
+HEADING SPELLING IS EXACT. Use each heading below verbatim,
+singular form, with its colon. Never pluralize, rename, merge,
+or add headings. In particular the last heading is exactly
+"NEXT STEP:" with no "S".
 
 HEADLINE:
-Two concise sentences.
+At least two full sentences that state the movement and its
+business significance.
 
 WHAT CHANGED:
-Explain the selected event's KPI movement and magnitude.
+At least three full sentences. Cite the before/after values, the
+absolute change, and explain what the change means for the
+business.
 
 MAIN DRIVER:
-Explain whether volume or AOV contributed more, using the
-supplied decomposition and supplied decomposition percentages.
+At least three full sentences. Explain whether volume or AOV
+contributed more. Use the supplied decomposition values and
+supplied decomposition percentages, and interpret their
+business meaning.
 
 WHERE:
-Mention the most important observed contributor only when
-material.
+At least two full sentences naming the most important
+observed contributors, including their contribution values,
+shares, and evidence status when available.
 
 CUSTOMER EVIDENCE:
-Use the supplied review/aspect evidence when available.
-Mention meaningful changes in review mentions or sentiment,
-but do not present them as causal proof.
+At least two full sentences summarizing the supplied
+review/aspect evidence. Mention meaningful changes in review
+mentions or sentiment, but do not present them as causal proof.
 
 WHAT WE KNOW:
-Respect exact evidence statuses.
-Explain uncertainty when root cause is not established.
+At least three full sentences. Respect exact evidence statuses
+for each driver and explain uncertainty when root cause is not
+established.
 
 NEXT STEP:
-Use only the supplied action/decision evidence.
-Never recommend acting on a CONTRADICTED hypothesis.
+At least two full sentences using only the supplied
+action/decision evidence. Never recommend acting on a
+CONTRADICTED hypothesis.
 ABSTAIN means collect more evidence.
 WEAK means investigate rather than conclude.
 
-Keep the response below approximately 250 words.
+STRICT RULES:
+- Output nothing before HEADLINE.
+- Output nothing after NEXT STEP.
+- Every heading MUST appear exactly once.
+- Never omit a heading.
+- Never add extra headings.
+- Never merge two headings into one.
+- Write exactly one paragraph per heading, then move to the
+  next heading.
+- Never repeat the same section a second time.
+- Never rewrite a section you have already written.
+- Never output analysis, reasoning, drafts, or commentary.
+- Never calculate a new number.
+- Never invent a number.
+- Only report numbers explicitly present in the evidence.
+- Never compute a percentage change from two other numbers.
+- Never state confidence values, thresholds, or record counts.
+- CONTRADICTED = do not act.
+- ABSTAIN = collect more evidence.
+- WEAK = investigate, not conclude.
+- Observed contribution is not causation.
+
+LENGTH:
+Aim for approximately 300 to 360 words in total. Develop each
+section with the specific figures supplied; do not compress the
+story into one sentence per section.
+
+REMINDER:
+The finished narrative MUST contain all seven headings in order.
+Your response is INCOMPLETE unless every heading from HEADLINE
+to NEXT STEP appears exactly once. Write the response from the
+first heading to the last without stopping early.
 
 SELECTED EVENT EVIDENCE:
 {json.dumps(
@@ -1355,26 +1513,34 @@ Write the Operations KPI narrative for the SELECTED EVENT.
 Use ONLY the supplied evidence.
 Do not calculate, infer, combine, or invent facts.
 
-OUTPUT EXACTLY THESE SIX SECTIONS, IN THIS ORDER:
+OUTPUT EXACTLY THESE SIX SECTIONS, IN THIS ORDER.
+HEADING SPELLING IS EXACT. Use each heading below verbatim,
+singular form, with its colon. Never pluralize, rename, merge,
+or add headings.
 
 KPI MOVEMENT:
-2 concise sentences.
+At least three full sentences describing the movement and its
+magnitude.
 
 ANALYTICAL DECOMPOSITION:
-2 concise sentences.
+At least four full sentences explaining the drivers, using the
+supplied decomposition values and percentages and interpreting
+their business meaning.
 
 TOP INVESTIGATION AREAS:
-Maximum 3 short items.
+Up to 3 items, each one to two full sentences and tied to a
+supplied figure or evidence status.
 
 CUSTOMER / REVIEW EVIDENCE:
-2 concise sentences.
+At least three full sentences using the supplied review
+evidence. Do not present review patterns as causal proof.
 
 ACTIONS:
-1-2 concise sentences. Use ONLY supplied decisions/actions.
+At least two full sentences. Use ONLY supplied decisions/actions.
 If no action is justified, explicitly say that.
 
 DATA QUALITY:
-1 concise sentence using ONLY supplied data-quality information.
+One to two sentences using ONLY supplied data-quality information.
 
 STRICT RULES:
 - Output nothing before KPI MOVEMENT.
@@ -1387,12 +1553,30 @@ STRICT RULES:
 - Never sum or derive review counts.
 - Never invent a number.
 - Only report numbers explicitly present in the evidence.
+- Never compute a percentage change from two other numbers.
+- Never state confidence values, thresholds, or record counts.
 - Do not repeat the same number unnecessarily.
 - CONTRADICTED = do not act.
 - ABSTAIN = collect more evidence.
 - WEAK = investigate, not conclude.
 - Observed contribution is not causation.
-- Keep the total response below 180 words.
+
+LENGTH:
+Aim for approximately 250 to 320 words in total. Develop each
+section with the specific figures supplied; do not compress the
+story into one sentence per section.
+
+REMINDER:
+The finished narrative MUST contain at least 250 words. Every
+section MUST contain at least the number of sentences specified
+above. Expand with business interpretation of the supplied
+figures, never with invented facts.
+
+COMPLETION RULE:
+Your response is INCOMPLETE unless all six headings above
+appear exactly once, in order. Write the response from the
+first heading to the last without stopping early. Continue
+until you have produced every section.
 
 EVIDENCE:
 {json.dumps(
@@ -1512,6 +1696,13 @@ def create_provider_client(
         # No SDK client is required for OpenRouter Messages API.
         return None
 
+    if provider == "local":
+
+        # Local OpenAI-compatible servers (Ollama, LM Studio,
+        # llama.cpp server, vLLM) need no API key. All calls are
+        # made with direct HTTP inside generate_story.
+        return None
+
     if provider == "groq":
 
         api_key = os.getenv(
@@ -1589,6 +1780,8 @@ def generate_story(
     model = (
         model or MODEL_NAME
     ).strip()
+
+    used_temperature = TEMPERATURE
 
     start_time = time.perf_counter()
 
@@ -1749,6 +1942,265 @@ def generate_story(
                 + completion_tokens
                 + reasoning_tokens
             )
+
+        elif provider == "local":
+
+            # Local inference uses its own sampling temperature
+            # (Qwen3 non-thinking mode is tuned for ~0.6).
+            used_temperature = LOCAL_LLM_TEMPERATURE
+
+            # Local inference server. Two request modes:
+            #   "ollama" -> native /api/chat with thinking disabled
+            #   "openai" -> OpenAI-compatible /v1/chat/completions
+            if LOCAL_LLM_API_MODE == "ollama":
+
+                ollama_base = LOCAL_LLM_BASE_URL
+
+                if ollama_base.endswith("/v1"):
+                    ollama_base = ollama_base[:-3]
+
+                response = requests.post(
+                    f"{ollama_base}/api/chat",
+
+                    headers={
+                        "Content-Type":
+                            "application/json",
+                    },
+
+                    json={
+                        "model":
+                            model,
+
+                        "messages": [
+                            {
+                                "role":
+                                    "system",
+
+                                "content":
+                                    system_prompt,
+                            },
+
+                            {
+                                "role":
+                                    "user",
+
+                                "content":
+                                    prompt,
+                            }
+                        ],
+
+                        "stream":
+                            False,
+
+                        # Qwen3 is a thinking model. Disable visible
+                        # reasoning so the full token budget goes to
+                        # the governed narrative.
+                        "think":
+                            False,
+
+                        "options":
+                            _build_local_ollama_options(),
+                    },
+
+                    # Local inference can be much slower than a
+                    # hosted API, especially on CPU.
+                    timeout=(10, 600),
+                )
+
+                if response.status_code >= 400:
+
+                    raise RuntimeError(
+                        "Local LLM api/chat "
+                        f"HTTP {response.status_code}: "
+                        f"{response.text}"
+                    )
+
+                data = response.json()
+
+                message = (
+                    data.get("message")
+                    or {}
+                )
+
+                content = (
+                    message.get("content")
+                    or ""
+                ).strip()
+
+                # Defensive: strip any <think>...</think> blocks
+                # even when thinking is disabled server-side.
+                content = re.sub(
+                    r"<think>.*?</think>",
+                    "",
+                    content,
+                    flags=re.DOTALL,
+                ).strip()
+
+                if not content:
+
+                    raise RuntimeError(
+                        "Local LLM returned no visible text "
+                        f"for {model}. "
+                        f"done_reason={data.get('done_reason')!r}; "
+                        f"response={data!r}"
+                    )
+
+                # Native Ollama usage counters.
+                prompt_tokens = int(
+                    data.get(
+                        "prompt_eval_count",
+                        0,
+                    )
+                    or 0
+                )
+
+                completion_tokens = int(
+                    data.get(
+                        "eval_count",
+                        0,
+                    )
+                    or 0
+                )
+
+                reasoning_tokens = 0
+
+                total_tokens = (
+                    prompt_tokens
+                    + completion_tokens
+                )
+
+            else:
+
+                # Generic OpenAI-compatible inference server
+                # (LM Studio, llama.cpp server, vLLM, ...).
+                base_url = LOCAL_LLM_BASE_URL
+
+                response = requests.post(
+                    f"{base_url}/chat/completions",
+
+                    headers={
+                        "Content-Type":
+                            "application/json",
+                    },
+
+                    json={
+                        "model":
+                            model,
+
+                        "messages": [
+                            {
+                                "role":
+                                    "system",
+
+                                "content":
+                                    system_prompt,
+                            },
+
+                            {
+                                "role":
+                                    "user",
+
+                                "content":
+                                    prompt,
+                            }
+                        ],
+
+                        "temperature":
+                            LOCAL_LLM_TEMPERATURE,
+
+                        "max_tokens":
+                            MAX_OUTPUT_TOKENS,
+                    },
+
+                    # Local inference can be much slower than a
+                    # hosted API, especially on CPU.
+                    timeout=(10, 600),
+                )
+
+                if response.status_code >= 400:
+
+                    raise RuntimeError(
+                        "Local LLM chat/completions "
+                        f"HTTP {response.status_code}: "
+                        f"{response.text}"
+                    )
+
+                data = response.json()
+
+                choices = (
+                    data.get("choices")
+                    or []
+                )
+
+                if not choices:
+
+                    raise RuntimeError(
+                        f"Local LLM returned no choices "
+                        f"for {model}. "
+                        f"response={data!r}"
+                    )
+
+                message = (
+                    choices[0].get("message")
+                    or {}
+                )
+
+                content = (
+                    message.get("content")
+                    or ""
+                ).strip()
+
+                # Qwen3 (and other thinking models) can emit
+                # visible <think>...</think> blocks. Strip them
+                # so only the final narrative reaches the
+                # validator.
+                content = re.sub(
+                    r"<think>.*?</think>",
+                    "",
+                    content,
+                    flags=re.DOTALL,
+                ).strip()
+
+                if not content:
+
+                    raise RuntimeError(
+                        "Local LLM returned no visible text "
+                        f"for {model}. "
+                        f"finish_reason="
+                        f"{choices[0].get('finish_reason')!r}; "
+                        f"response={data!r}"
+                    )
+
+                usage = (
+                    data.get(
+                        "usage",
+                        {},
+                    )
+                    or {}
+                )
+
+                prompt_tokens = int(
+                    usage.get(
+                        "prompt_tokens",
+                        0,
+                    )
+                    or 0
+                )
+
+                completion_tokens = int(
+                    usage.get(
+                        "completion_tokens",
+                        0,
+                    )
+                    or 0
+                )
+
+                reasoning_tokens = 0
+
+                total_tokens = (
+                    prompt_tokens
+                    + completion_tokens
+                )
 
         elif provider == "anthropic":
 
@@ -1966,10 +2418,14 @@ def generate_story(
         - start_time
     ) * 1000
 
-    estimated_cost = estimate_cost(
-        prompt_tokens,
-        completion_tokens,
-    )
+    if provider == "local":
+        # Local inference has no per-token API cost.
+        estimated_cost = 0.0
+    else:
+        estimated_cost = estimate_cost(
+            prompt_tokens,
+            completion_tokens,
+        )
 
     if LLM_DEBUG:
 
@@ -2022,7 +2478,7 @@ def generate_story(
                 INCLUDE_REASONING,
 
             "temperature":
-                TEMPERATURE,
+                used_temperature,
 
             "max_completion_tokens":
                 MAX_OUTPUT_TOKENS,
@@ -2046,6 +2502,7 @@ def smoke_test_provider(
     Supported:
         - groq
         - openrouter
+        - local (OpenAI-compatible server at LLM_BASE_URL)
     """
 
     selected_provider = (
@@ -2203,8 +2660,166 @@ def smoke_test_provider(
 
         return content
 
+    if selected_provider == "local":
+
+        if LOCAL_LLM_API_MODE == "ollama":
+
+            ollama_base = LOCAL_LLM_BASE_URL
+
+            if ollama_base.endswith("/v1"):
+                ollama_base = ollama_base[:-3]
+
+            response = requests.post(
+                f"{ollama_base}/api/chat",
+
+                headers={
+                    "Content-Type":
+                        "application/json",
+                },
+
+                json={
+                    "model":
+                        selected_model,
+
+                    "messages": [
+                        {
+                            "role":
+                                "user",
+
+                            "content":
+                                "Reply with exactly: LOCAL_TEST_OK",
+                        }
+                    ],
+
+                    "stream":
+                        False,
+
+                    "think":
+                        False,
+
+                    "options":
+                        _build_local_ollama_options(
+                            temperature=0,
+                            num_predict=32,
+                        ),
+                },
+
+                timeout=(10, 120),
+            )
+
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    "Local LLM smoke test HTTP "
+                    f"{response.status_code}: "
+                    f"{response.text}"
+                )
+
+            data = response.json()
+
+            content = (
+                (
+                    data.get("message")
+                    or {}
+                )
+                .get("content", "")
+                or ""
+            ).strip()
+
+            content = re.sub(
+                r"<think>.*?</think>",
+                "",
+                content,
+                flags=re.DOTALL,
+            ).strip()
+
+            if not content:
+                raise RuntimeError(
+                    "Local LLM smoke test returned empty content. "
+                    f"response={data!r}"
+                )
+
+            return content
+
+        base_url = LOCAL_LLM_BASE_URL
+
+        response = requests.post(
+            f"{base_url}/chat/completions",
+
+            headers={
+                "Content-Type":
+                    "application/json",
+            },
+
+            json={
+                "model":
+                    selected_model,
+
+                "messages": [
+                    {
+                        "role":
+                            "user",
+
+                        "content":
+                            "Reply with exactly: LOCAL_TEST_OK",
+                    }
+                ],
+
+                "temperature":
+                    0,
+
+                "max_tokens":
+                    64,
+            },
+
+            timeout=(10, 120),
+        )
+
+        if response.status_code >= 400:
+            raise RuntimeError(
+                "Local LLM smoke test HTTP "
+                f"{response.status_code}: "
+                f"{response.text}"
+            )
+
+        data = response.json()
+
+        choices = (
+            data.get("choices")
+            or []
+        )
+
+        if not choices:
+            raise RuntimeError(
+                f"Local LLM smoke test returned no choices: "
+                f"{data!r}"
+            )
+
+        content = (
+            (
+                choices[0].get("message")
+                or {}
+            )
+            .get("content", "")
+            or ""
+        ).strip()
+
+        content = re.sub(
+            r"<think>.*?</think>",
+            "",
+            content,
+            flags=re.DOTALL,
+        ).strip()
+
+        if not content:
+            raise RuntimeError(
+                "Local LLM smoke test returned empty content. "
+                f"response={data!r}"
+            )
+
+        return content
+
     raise RuntimeError(
-        "Smoke test supports groq and openrouter."
+        "Smoke test supports groq, openrouter, and local."
     )
 
 
@@ -2444,20 +3059,34 @@ def _generate_persona_with_fallbacks(
     Generate one persona using the configured provider order.
 
     Provider order for the current setup:
-        1. Groq / openai/gpt-oss-120b
-        2. OpenRouter / openrouter/free
+        1. Local / qwen3:8b (Ollama)
 
     A candidate is accepted only when:
         LLM response -> cleanup -> success
 
+    Each candidate may be retried (CLEAN_RETRIES) after a cleanup
+    failure with structural feedback, because a small local model
+    can occasionally loop on one heading or omit required sections
+    on a stochastic roll. Retrying the SAME candidate with feedback
+    is cheaper and usually successful before exhausting candidates.
+
     The FastAPI validation layer remains authoritative for final
     grounding validation. Failed generation/cleanup candidates are
-    immediately skipped in favor of the next configured candidate.
+    then skipped in favor of the next configured candidate.
 
     IMPORTANT:
     Providers are NOT raced concurrently. This prevents the fallback
     provider from being called unnecessarily while the primary succeeds.
     """
+
+    CLEAN_RETRIES = int(
+        os.getenv(
+            "LLM_CLEAN_RETRIES",
+            "2",
+        )
+    )
+
+    global _LOCAL_FORCE_CPU
 
     if not candidates:
         raise RuntimeError(
@@ -2470,58 +3099,97 @@ def _generate_persona_with_fallbacks(
         candidates,
         start=1,
     ):
-        if LLM_DEBUG:
-            print(
-                f"[LLM ROUTER] TRY persona={persona} "
-                f"attempt={attempt} "
-                f"provider={provider} "
-                f"model={model}"
-            )
-
-        try:
-            result = _generate_one_persona_candidate(
-                investigation,
-                persona,
-                provider,
-                model,
-                validation_feedback,
-            )
+        for retry in range(1, CLEAN_RETRIES + 1):
 
             if LLM_DEBUG:
                 print(
-                    f"[LLM ROUTER] GENERATED persona={persona} "
+                    f"[LLM ROUTER] TRY persona={persona} "
+                    f"attempt={attempt} retry={retry} "
                     f"provider={provider} "
                     f"model={model}"
                 )
 
-            return {
-                "result": result,
-                "model_route": {
+            try:
+                result = _generate_one_persona_candidate(
+                    investigation,
+                    persona,
+                    provider,
+                    model,
+                    validation_feedback,
+                )
+
+                if LLM_DEBUG:
+                    print(
+                        f"[LLM ROUTER] GENERATED persona={persona} "
+                        f"provider={provider} "
+                        f"model={model}"
+                    )
+
+                return {
+                    "result": result,
+                    "model_route": {
+                        "provider": provider,
+                        "model": model,
+                        "attempt": attempt,
+                        "retries": retry - 1,
+                        "fallback_attempts": attempt - 1,
+                        "failed_candidates_before_winner": failures,
+                    },
+                }
+
+            except Exception as exc:
+                error_text = str(exc)
+
+                failure = {
                     "provider": provider,
                     "model": model,
-                    "attempt": attempt,
-                    "fallback_attempts": attempt - 1,
-                    "failed_candidates_before_winner": failures,
-                },
-            }
+                    "error": error_text,
+                }
 
-        except Exception as exc:
-            error_text = str(exc)
+                failures.append(failure)
 
-            failure = {
-                "provider": provider,
-                "model": model,
-                "error": error_text,
-            }
+                if LLM_DEBUG:
+                    print(
+                        f"[LLM ROUTER] FAILED persona={persona} "
+                        f"provider={provider} model={model}: "
+                        f"{error_text}"
+                    )
 
-            failures.append(failure)
+                # VRAM out-of-memory: switch the local provider to
+                # full CPU inference and retry this same candidate
+                # immediately, instead of burning clean retries on
+                # a request that would fail identically on GPU.
+                if (
+                    provider == "local"
+                    and not _LOCAL_FORCE_CPU
+                    and _is_vram_oom_error(error_text)
+                ):
 
-            if LLM_DEBUG:
-                print(
-                    f"[LLM ROUTER] FAILED persona={persona} "
-                    f"provider={provider} model={model}: "
-                    f"{error_text}"
-                )
+                    _LOCAL_FORCE_CPU = True
+
+                    if LLM_DEBUG:
+                        print(
+                            "[LLM ROUTER] VRAM OOM detected for "
+                            f"{model}; forcing CPU-only local "
+                            "inference and retrying"
+                        )
+
+                    continue
+
+                # Give the model structural feedback about missing
+                # or extra headings so the next retry can fix it.
+                if retry < CLEAN_RETRIES:
+                    validation_feedback = (
+                        _build_cleanup_feedback(
+                            persona,
+                            exc,
+                        )
+                    )
+                    continue
+
+                # Exhausted retries for this candidate: break to the
+                # next candidate.
+                break
 
     raise RuntimeError(
         f"All configured LLM candidates failed for {persona}. "
@@ -2532,6 +3200,68 @@ def _generate_persona_with_fallbacks(
     )
 
 
+def _build_cleanup_feedback(
+    persona,
+    exc,
+):
+    """
+    Convert a narrative-cleanup exception into structured feedback
+    that the prompt can use to fix the section layout.
+
+    The cleaner raises messages such as:
+      "executive narrative is incomplete. Expected ['HEADLINE', ...];
+       found ['HEADLINE', 'WHAT CHANGED']"
+    """
+    text = str(exc)
+
+    if "incomplete" not in text:
+        return {
+            "persona": persona,
+            "issue": "cleanup_failure",
+            "detail": text,
+        }
+
+    expected_match = re.search(
+        r"Expected (\[.*?\]);",
+        text,
+    )
+
+    found_match = re.search(
+        r"found (\[.*?\]).*?$",
+        text,
+    )
+
+    feedback = {
+        "persona": persona,
+        "issue": "missing_or_repeated_headings",
+        "validation": {
+            "passed": False,
+        },
+    }
+
+    if expected_match:
+        try:
+            feedback["expected_headings"] = ast.literal_eval(
+                expected_match.group(1)
+            )
+        except (SyntaxError, ValueError):
+            feedback["expected_headings_raw"] = (
+                expected_match.group(1)
+            )
+
+    if found_match:
+        try:
+            feedback["found_headings"] = ast.literal_eval(
+                found_match.group(1)
+            )
+        except (SyntaxError, ValueError):
+            feedback["found_headings_raw"] = (
+                found_match.group(1)
+            )
+
+    return feedback
+
+
 def generate_event_narratives(
     investigation,
     validation_feedback=None,
@@ -2540,8 +3270,7 @@ def generate_event_narratives(
     Generate Executive and Operations narratives independently.
 
     Current production route:
-        Groq GPT-OSS 120B
-            -> OpenRouter/free
+        Local Qwen3 8B (Ollama)
 
     Executive and Operations run in parallel with each other.
     Within each persona, provider fallback is strictly sequential.

@@ -1,13 +1,30 @@
-provider: groq
+provider: local
 
-model: openai/gpt-oss-120b
+# Only qwen3:1.7b (~1.4GB) fits in the effectively-free VRAM of the
+# RTX 3050 (6GB total; desktop apps hold the rest). Larger qwen3
+# models remain as CPU-inference fallbacks configured in .env.
+model: qwen3:1.7b
+
+# Base URL of the local OpenAI-compatible inference server
+# (Ollama default; LM Studio uses http://localhost:1234/v1).
+base_url: http://localhost:11434/v1
+
+# Request mode: "ollama" uses the native /api/chat endpoint with
+# Qwen3 thinking disabled; "openai" uses /v1/chat/completions.
+api_mode: ollama
 
 pricing:
-  input_usd_per_million_tokens: 0.15
-  output_usd_per_million_tokens: 0.60
+  # Local inference: no per-token API cost.
+  input_usd_per_million_tokens: 0.0
+  output_usd_per_million_tokens: 0.0
 
 settings:
   temperature: 0.1
-  reasoning_effort: low
-  include_reasoning: false
-  max_completion_tokens: 700
+  # Sampling temperature used only by the local provider
+  # (Qwen3 non-thinking mode recommended range).
+  local_temperature: 0.6
+  # Prevents Qwen3 repetition loops (Ollama repeat_penalty).
+  local_repeat_penalty: 1.3
+  # Generation retries when the section cleaner rejects output.
+  clean_retries: 2
+  max_completion_tokens: 1400

@@ -15,3 +15,5 @@ transformers==5.16.0
 torch==2.13.0
 sentencepiece==0.2.2
 protobuf==7.36.0
+# dev / test tooling
+pytest==9.1.1

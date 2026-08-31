@@ -1019,7 +1019,12 @@ def event_narrative(
         validation_feedback = None
         last_result = None
 
-        for attempt in range(2):
+        # Three validation attempts. A small local model
+        # (qwen3:1.7b) occasionally hallucinates a number that is not
+        # in the evidence; the validator rejects it and the retry
+        # receives the violations as feedback. Two attempts left the
+        # dashboard rejection warning too frequent.
+        for attempt in range(3):
 
             narratives = generate_event_narratives(
                 investigation,

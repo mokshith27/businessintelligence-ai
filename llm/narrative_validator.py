@@ -97,6 +97,28 @@ def extract_numeric_claims(text):
         r"%?"
     )
 
+    # ----------------------------------------------------------
+    # Mask hex-like identifiers before extraction.
+    #
+    # Evidence packages legitimately contain opaque IDs (seller IDs,
+    # order IDs, ...) such as 955fee9216a65b617aa5c0531780ce60.
+    # A narrative that cites such an ID is not making a numeric
+    # claim, but the digit runs inside the hash were previously
+    # extracted as unsupported numeric claims ("955", "216",
+    # "531780", ...), failing the numbers check spuriously.
+    #
+    # A token is treated as an identifier when it is a run of at
+    # least 10 hex characters containing at least one letter a-f,
+    # so pure numbers are never masked.
+    # ----------------------------------------------------------
+
+    text = re.sub(
+        r"\b(?=[0-9a-f]*[a-f][0-9a-f]*\b)[0-9a-f]{10,}\b",
+        " ",
+        text,
+        flags=re.IGNORECASE,
+    )
+
     matches = list(
         re.finditer(
             pattern,
@@ -1230,6 +1252,11 @@ def validate_currency(
     )
 
     violations = []
+
+    # Small local models sometimes emit markdown-escaped currency,
+    # e.g. "R\$3,673.91". Normalize the escape so "R\$" is read as
+    # "R$" instead of being flagged as a bare dollar sign.
+    story = story.replace("\\$", "$")
 
     story_upper = story.upper()
 
