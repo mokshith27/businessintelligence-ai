@@ -19,4 +19,4 @@ sentencepiece==0.2.2
 protobuf==7.36.0
 # dev / test tooling
 pytest==9.1.1
-pyjwt==2.10.1
+
