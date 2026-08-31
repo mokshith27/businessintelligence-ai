@@ -32,7 +32,7 @@ The project is designed around one core principle:
   <img src="https://img.shields.io/badge/DuckDB-FFF100?logo=duckdb&logoColor=black" alt="DuckDB">
   <img src="https://img.shields.io/badge/tests-37%20passed-2ea44f" alt="37 tests passing">
   <img src="https://github.com/mokshith27/businessintelligence-ai/actions/workflows/ci.yml/badge.svg" alt="CI">
-  <img src="https://img.shields.io/badge/status-prototype-orange" alt="Status: prototype">
+  <img src="https://img.shields.io/badge/status-decision%20intelligence%20platform-8A2BE2" alt="Status: decision intelligence platform">
 </p>
 
 ---
