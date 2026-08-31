@@ -1,8 +1,25 @@
 # BusinessIntelligence.ai
 
+> **Decision intelligence for marketplace operations teams.**
 > **From KPI movement to evidence-backed action.**
 
 BusinessIntelligence.ai is an end-to-end **decision-intelligence system** that detects meaningful business KPI movements, investigates *where* the change occurred, combines structured and unstructured evidence, estimates confidence, **abstains when evidence is insufficient**, recommends safe business actions, and generates evidence-grounded narratives for different user roles.
+
+**Who it is for:** marketplace and e-commerce operations teams. The
+Executive view is tailored to the **Head of Marketplace Operations**, the
+Operations view to the **Marketplace Ops Team Lead**, and the Analyst view
+to the **Business/Data Analyst**.
+
+**Proven business impact:** a deterministic, assumption-transparent
+back-test on the shipped data estimates **R$17.5k of recoverable GMV**
+across 15 flagged negative events (R$228k at risk), with events detected
+on their **first anomalous day** — see the
+[Business Impact (ROI)](#12-llm-layer--narrative-governance) panel and
+`GET /api/roi/summary`.
+
+**Preparing a demo?** Follow [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) —
+a rehearsed 3-minute narrative arc from 2am detection to validated
+narrative to ROI close.
 
 The project is designed around one core principle:
 
@@ -534,6 +551,7 @@ Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 | `GET` | `/api/review-evidence` | Review evidence for an event window |
 | `GET` | `/api/actions` | Recommended actions |
 | `GET` | `/api/telemetry` | LLM telemetry: latency, token usage, model calls, cost |
+| `GET` | `/api/roi/summary` | Back-tested business impact: at-risk GMV, detection lead, recoverable value |
 | `POST` | `/api/feedback` | Submit analyst feedback |
 | `GET` | `/api/feedback` | List feedback records |
 | `GET` | `/api/calibration` | Feedback calibration report |
@@ -926,6 +944,7 @@ This project is a decision-intelligence **prototype**, not a production enterpri
 
 ## 23. Documentation & Navigation
 
+- 🎤 **3-minute demo script** → [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — rehearsed demo arc with Q&A ammunition
 - 📖 **Getting Started** → [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first-run guide
 - 🏗️ **Architecture walkthrough** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map
 - 🤝 **Contributing** → [`CONTRIBUTING.md`](CONTRIBUTING.md)

@@ -58,6 +58,12 @@ def build_executive_view(insight):
         "persona":
             "executive",
 
+        "persona_role":
+            "Head of Marketplace Operations",
+
+        "vertical":
+            "Marketplace / e-commerce operations",
+
         "headline":
 
             (

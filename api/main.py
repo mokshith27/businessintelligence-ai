@@ -2044,6 +2044,60 @@ def telemetry():
 
 
 # ============================================================
+# BUSINESS IMPACT (BACK-TESTED ROI)
+# ============================================================
+
+@app.get("/api/roi/summary")
+def roi_summary(
+    refresh: bool = False,
+):
+    """
+    Return the back-tested business-impact (ROI) summary.
+
+    The estimator runs the production event-investigation engine over
+    flagged NEGATIVE KPI events and quantifies:
+
+    - at-risk GMV per event (cumulative absolute impact);
+    - detection lead time (days the system flags the event earlier
+      than after-the-fact manual review);
+    - actionability from the evidence-gated decision engine;
+    - estimated recoverable GMV under a conservative recovery rate.
+
+    Results are cached to data/roi/roi_backtest.json. Pass
+    ?refresh=true to recompute from the warehouse.
+    """
+
+    try:
+
+        from roi.roi_estimator import get_roi_summary
+
+        result = get_roi_summary(
+            refresh=bool(refresh),
+        )
+
+        return make_json_safe(result)
+
+    except FileNotFoundError as exc:
+
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Warehouse not found. Run the analytical pipeline "
+                f"first: {exc}"
+            ),
+        )
+
+    except Exception as exc:
+
+        print(f"[ERROR] /api/roi/summary: {exc}")
+
+        raise HTTPException(
+            status_code=500,
+            detail=str(exc),
+        )
+
+
+# ============================================================
 # ROOT
 # ============================================================
 

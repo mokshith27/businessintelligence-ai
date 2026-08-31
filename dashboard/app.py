@@ -395,7 +395,8 @@ with st.sidebar:
     )
 
     st.caption(
-        "KPI Intelligence → Action"
+        "Decision intelligence for "
+        "marketplace operations teams"
     )
 
     st.divider()
@@ -410,6 +411,17 @@ with st.sidebar:
     )
 
     role_key = role.lower()
+
+    buyer_persona = {
+        "Executive": "Head of Marketplace Operations",
+        "Operations": "Marketplace Ops Team Lead",
+        "Analyst": "Business / Data Analyst",
+    }
+
+    st.caption(
+        "You are viewing as: "
+        f"**{buyer_persona.get(role, role)}**"
+    )
 
     st.divider()
 
@@ -1353,6 +1365,182 @@ if role == "Executive":
     st.header(
         "Executive View"
     )
+    # --------------------------------------------------------
+    # Business Impact — back-tested ROI
+    # Buyer persona: Head of Marketplace Operations
+    # --------------------------------------------------------
+
+    roi = api_get(
+        "/api/roi/summary",
+        timeout=90,
+    )
+
+    if roi:
+
+        roi_summary = roi.get(
+            "summary",
+            {},
+        )
+
+        st.subheader(
+            "Business Impact — Back-Tested ROI"
+        )
+
+        st.caption(
+            "Estimated on flagged NEGATIVE KPI events using the same "
+            "deterministic engine that powers this dashboard. All "
+            "assumptions are stated below — nothing here is a forecast."
+        )
+
+        roi_m1, roi_m2, roi_m3, roi_m4 = st.columns(4)
+
+        with roi_m1:
+
+            st.metric(
+                "Flagged at-risk GMV",
+                format_brl(
+                    roi_summary.get(
+                        "total_at_risk_gmv",
+                        0,
+                    )
+                ),
+            )
+
+        with roi_m2:
+
+            st.metric(
+                "Est. recoverable GMV",
+                format_brl(
+                    roi_summary.get(
+                        "estimated_recoverable_gmv",
+                        0,
+                    )
+                ),
+            )
+
+        with roi_m3:
+
+            st.metric(
+                "Avg detection lead",
+                f"{roi_summary.get('average_detection_lead_days', 0)} d",
+            )
+
+        with roi_m4:
+
+            st.metric(
+                "Actionable events",
+                (
+                    f"{roi_summary.get('actionable_events', 0)}"
+                    f" / {roi_summary.get('events_analyzed', 0)}"
+                ),
+            )
+
+        roi_hero = roi.get(
+            "hero_event",
+        )
+
+        if roi_hero:
+
+            st.success(
+                "Hero case — Event "
+                f"{roi_hero.get('event_id')} "
+                f"({roi_hero.get('start_date')} to "
+                f"{roi_hero.get('end_date')}): flagged on day 1 with "
+                f"{roi_hero.get('detection_lead_days')} day(s) of "
+                "detection lead and "
+                f"R${roi_hero.get('at_risk_gmv'):,.2f} of GMV at risk. "
+                "Acting on the recommended action "
+                f"({roi_hero.get('main_decision')}) could have recovered "
+                "up to "
+                f"R${roi_hero.get('estimated_recoverable_gmv'):,.2f} "
+                f"(owner: {roi_hero.get('main_owner') or 'Operations'})."
+            )
+
+        with st.expander(
+            "Top value-at-risk events"
+        ):
+
+            roi_rows = []
+
+            for roi_row in roi.get(
+                "events",
+                [],
+            ):
+
+                if not roi_row.get(
+                    "actionable",
+                ):
+                    continue
+
+                roi_rows.append(
+                    {
+                        "Event":
+                            roi_row.get(
+                                "event_id",
+                            ),
+
+                        "Window":
+                            (
+                                f"{roi_row.get('start_date')}"
+                                f" → {roi_row.get('end_date')}"
+                            ),
+
+                        "Lead (days)":
+                            roi_row.get(
+                                "detection_lead_days",
+                            ),
+
+                        "At-risk GMV":
+                            format_brl(
+                                roi_row.get(
+                                    "at_risk_gmv",
+                                    0,
+                                )
+                            ),
+
+                        "Est. recoverable":
+                            format_brl(
+                                roi_row.get(
+                                    "estimated_recoverable_gmv",
+                                    0,
+                                )
+                            ),
+
+                        "Decision":
+                            roi_row.get(
+                                "main_decision",
+                            ),
+
+                        "Owner":
+                            roi_row.get(
+                                "main_owner",
+                            ),
+                    }
+                )
+
+            st.dataframe(
+                roi_rows,
+                width="stretch",
+                hide_index=True,
+            )
+
+        with st.expander(
+            "Assumptions & method"
+        ):
+
+            roi_assumptions = roi.get(
+                "assumptions",
+                {},
+            )
+
+            for assumption_key, assumption_value in roi_assumptions.items():
+
+                st.markdown(
+                    f"**{assumption_key.replace('_', ' ').title()}**: "
+                    f"{assumption_value}"
+                )
+
+        st.divider()
 
     if story:
 
