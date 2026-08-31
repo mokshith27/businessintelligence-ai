@@ -30,6 +30,23 @@ from llm.story_generator import (
     generate_event_narratives,
 )
 
+from fastapi import Header
+
+from security import auth as jwt_auth
+
+from analytics.multi_kpi import compute_all_kpis
+
+from forecasting.forecaster import (
+    build_forecast_payload,
+    build_simulation_payload,
+)
+
+from realtime.watcher import (
+    scan_incoming as watcher_scan,
+    read_alerts as watcher_read_alerts,
+    inject_demo_batch as watcher_inject_demo,
+)
+
 
 # ============================================================
 # PATHS
@@ -2113,4 +2130,161 @@ def root():
 
         "documentation":
             "/docs",
+
+
     }
+
+
+# ============================================================
+# AUTH (JWT)
+# ============================================================
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/api/auth/login")
+def auth_login(body: LoginRequest):
+    """Issue a signed JWT for the demo users."""
+    try:
+        user = jwt_auth.authenticate(body.username, body.password)
+    except jwt_auth.AuthenticationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+
+    token = jwt_auth.create_token(user)
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "expires_in_minutes": jwt_auth.JWT_EXPIRE_MINUTES,
+        "user": {
+            "username": user["username"],
+            "role": user["role"],
+            "full_name": user["full_name"],
+        },
+    }
+
+
+@app.get("/api/auth/me")
+def auth_me(authorization: Optional[str] = Header(None)):
+    """Validate the bearer token and return the identity + role."""
+    try:
+        payload = jwt_auth.authorize(jwt_auth.extract_bearer(authorization))
+    except jwt_auth.AuthenticationError as exc:
+        raise HTTPException(status_code=401, detail=str(exc))
+    except jwt_auth.AuthorizationError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
+
+    return {
+        "username": payload["sub"],
+        "role": payload["role"],
+        "full_name": payload.get("name"),
+        "auth_enforced": not jwt_auth.AUTH_DISABLED,
+    }
+
+
+# ============================================================
+# MULTI-KPI STATUS
+# ============================================================
+
+
+@app.get("/api/kpis/status")
+def kpis_status(table: str = Query("fact_daily_kpis")):
+    """Materiality/anomaly status for every KPI (gmv, orders, aov,
+    late_delivery_rate, review_score)."""
+    if table not in ("fact_daily_kpis", "fact_daily_kpis_live"):
+        raise HTTPException(status_code=400, detail="unknown table")
+
+    try:
+        return compute_all_kpis(table=table)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except Exception as exc:
+        print(f"[ERROR] /api/kpis/status: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ============================================================
+# FORECASTING + PRESCRIPTIVE SIMULATION
+# ============================================================
+
+
+@app.get("/api/forecast/{kpi_id}")
+def forecast_kpi(
+    kpi_id: str,
+    horizon: int = Query(14, ge=1, le=90),
+):
+    """Deterministic damped-trend forecast with an 80% interval."""
+    try:
+        return build_forecast_payload(kpi_id, horizon=horizon)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        print(f"[ERROR] /api/forecast: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+class SimulationRequest(BaseModel):
+    kpi_id: str
+    uplift_pct: float
+    horizon: int = 14
+
+
+@app.post("/api/simulation")
+def simulation(body: SimulationRequest):
+    """Prescriptive 'what if we act' simulation over the forecast."""
+    try:
+        return build_simulation_payload(
+            body.kpi_id,
+            uplift_pct=body.uplift_pct,
+            horizon=max(1, min(90, body.horizon)),
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        print(f"[ERROR] /api/simulation: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ============================================================
+# REALTIME WATCHER
+# ============================================================
+
+
+@app.get("/api/watch/alerts")
+def watch_alerts(limit: int = Query(50, ge=1, le=500)):
+    """Recent intraday alerts emitted by the watcher."""
+    return {"alerts": watcher_read_alerts(limit=limit)}
+
+
+@app.post("/api/watch/scan")
+def watch_scan():
+    """Run one intraday scan now (ingest incoming files, re-check KPIs)."""
+    try:
+        return watcher_scan()
+    except Exception as exc:
+        print(f"[ERROR] /api/watch/scan: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/api/watch/simulate-incoming")
+def watch_simulate_incoming():
+    """Demo helper: write a synthetic intraday batch, scan it, return
+    the alerts raised — the live 'drop a file, get an alert' moment."""
+    try:
+        injected = watcher_inject_demo()
+        scan = watcher_scan()
+        return {
+            "injected": injected,
+            "scan": scan,
+            "alerts_raised": [a["kpi_id"] for a in scan["new_alerts"]],
+        }
+    except Exception as exc:
+        print(f"[ERROR] /api/watch/simulate-incoming: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))

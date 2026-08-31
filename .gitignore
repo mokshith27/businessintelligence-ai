@@ -44,3 +44,5 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+data/incoming/
+data/realtime/

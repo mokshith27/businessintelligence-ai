@@ -578,6 +578,13 @@ Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 | `GET` | `/api/actions` | Recommended actions |
 | `GET` | `/api/telemetry` | LLM telemetry: latency, token usage, model calls, cost |
 | `GET` | `/api/roi/summary` | Back-tested business impact: at-risk GMV, detection lead, recoverable value |
+| `POST` | `/api/auth/login` | JWT login: returns a signed bearer token with role claims (demo users in README §17) |
+| `GET` | `/api/auth/me` | Validate a bearer token and return the authenticated identity |
+| `GET` | `/api/kpis/status` | All 5 KPIs (gmv, orders, aov, late_delivery_rate, review_score) evaluated against their contracts |
+| `GET` | `/api/forecast/{kpi_id}?horizon=14` | KPI forecast: damped trend + weekday seasonality with an 80% prediction interval |
+| `POST` | `/api/simulation` | Prescriptive simulation: "what happens if we act" — applies an uplift to the forecast |
+| `POST` | `/api/watch/simulate-incoming` | Drop a synthetic intraday batch, scan it, and raise alerts (live demo moment) |
+| `GET` | `/api/watch/alerts` | Recent intraday alerts with wall-clock detection timestamps |
 | `POST` | `/api/feedback` | Submit analyst feedback |
 | `GET` | `/api/feedback` | List feedback records |
 | `GET` | `/api/calibration` | Feedback calibration report |
@@ -819,6 +826,24 @@ Average score         : 1.000
 ---
 
 ## 17. Role-Based Security
+
+**JWT authentication is now enforced at the API level** (in addition to the application-level role filtering below). `/api/auth/login` issues a signed HS256 token (role claim, 8h expiry); `/api/auth/me` validates it. Set `AUTH_DISABLED=1` in `.env` to bypass auth for local development — it is **enabled by default**.
+
+**Demo users** (passwords are for the demo only; production would use SSO / an identity provider):
+
+| Username | Password | Role | Persona |
+|---|---|---|---|
+| `maria.exec` | `demo-exec-2026` | executive | Head of Marketplace Operations |
+| `joao.ops` | `demo-ops-2026` | operations | Marketplace Ops Team Lead |
+| `ana.analyst` | `demo-analyst-2026` | analyst | Business / Data Analyst |
+
+Passwords are stored as PBKDF2-SHA256 hashes (120k iterations), never plaintext. Quick check:
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "maria.exec", "password": "demo-exec-2026"}'
+```
 
 The prototype implements application-level information filtering (not enterprise SSO/JWT/RBAC).
 
