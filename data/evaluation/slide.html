@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>System Evaluation</title>
+<style>
+body{margin:0;background:#0b1020;color:#e8ecf7;font-family:'Segoe UI',Arial,sans-serif}
+.slide{max-width:1180px;margin:24px auto;padding:34px 42px;background:#0e1428;
+border:1px solid #232c4a;border-radius:14px}
+h1{font-size:26px;margin:0 0 2px} h1 .accent{color:#3fa7ff}
+.sub{color:#8b96b5;font-size:13px;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:#131a33;border:1px solid #232c4a;border-radius:10px;padding:16px 18px}
+.card h2{font-size:14px;margin:0 0 10px;color:#aebadb;text-transform:uppercase;
+letter-spacing:.6px}
+.big{font-size:34px;font-weight:700;color:#3fa7ff}
+.big.gold{color:#ffd166}.big.green{color:#4ade80}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;
+border-bottom:1px dashed #232c4a;gap:12px}
+.kv:last-child{border-bottom:none}
+.kv b{color:#e8ecf7;text-align:right}.kv span{color:#8b96b5}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{color:#8b96b5;text-align:left;font-weight:600;padding:4px 6px;
+border-bottom:1px solid #2a3350}
+td{padding:4px 6px;border-bottom:1px dashed #202845}
+.ok{color:#4ade80;font-weight:600}.miss{color:#f87171;font-weight:600}
+.foot{margin-top:16px;color:#5b6b94;font-size:11px}
+code{color:#8b96b5}
+</style></head><body>
+<div class="slide">
+  <h1>BusinessIntelligence<span class="accent">.ai</span> — Measured, Not Asserted</h1>
+  <div class="sub">Evaluation notebook · validator robustness, acceptance, LLM
+telemetry, calibration · generated 2026-08-31T22:38:03 · warehouse event
+GMV_EVT_037</div>
+  <div class="grid">
+    <div class="card">
+      <h2>Validator vs seeded hallucinations</h2>
+      <div class="big green">100%</div>
+      <div class="kv"><span>defects caught (any check)</span><b>
+12/12</b></div>
+      <div class="kv"><span>caught by the intended check</span><b>
+12/12</b></div>
+      <div class="kv"><span>false positives on clean narratives</span><b>
+0</b></div>
+      <table style="margin-top:10px"><tr><th>check</th><th>seeds</th>
+      <th>caught</th><th>missed</th><th>FP</th><th>prec</th><th>rec</th></tr>
+      <tr><td>numbers</td><td>2</td><td class=ok>2</td><td>0</td><td class=ok>0</td><td>100%</td><td>100%</td></tr><tr><td>statuses</td><td>2</td><td class=ok>2</td><td>0</td><td class=ok>0</td><td>100%</td><td>100%</td></tr><tr><td>uncertainty</td><td>2</td><td class=ok>2</td><td>0</td><td class=ok>0</td><td>100%</td><td>100%</td></tr><tr><td>currency</td><td>2</td><td class=ok>2</td><td>0</td><td class=ok>0</td><td>100%</td><td>100%</td></tr><tr><td>causal_language</td><td>2</td><td class=ok>2</td><td>0</td><td class=ok>0</td><td>100%</td><td>100%</td></tr><tr><td>driver_claims</td><td>2</td><td class=ok>2</td><td>0</td><td class=ok>0</td><td>100%</td><td>100%</td></tr></table>
+    </div>
+    <div class="card">
+      <h2>Narrative acceptance</h2>
+      <div class="big">100%</div>
+      <div class="kv"><span>narratives validated</span><b>
+2</b></div>
+      <div class="kv"><span>analyst acceptance (CORRECT / definite)</span><b>
+100%</b></div>
+      <div class="kv"><span>feedback records</span><b>9
+(correct 7 · incorrect 0 ·
+missing-context 2)</b></div>
+      <h2 style="margin-top:16px">LLM telemetry</h2>
+      <div class="kv"><span>model</span><b>openai/gpt-oss-120b</b></div>
+      <div class="kv"><span>mean latency / narrative</span><b>
+2253.1 ms</b></div>
+      <div class="kv"><span>mean tokens / narrative</span><b>
+1854</b></div>
+      <div class="kv"><span>mean cost / narrative</span><b>
+$0.000517</b></div>
+      <div class="kv"><span>projected cost / 1,000 narratives</span><b>
+$0.52</b></div>
+      <table style="margin-top:10px"><tr><th>persona</th><th>model</th>
+      <th>ms</th><th>tokens</th><th>cost</th></tr><tr><td>executive</td><td>openai/gpt-oss-120b</td><td>1984</td><td>1,722</td><td>$0.00046</td></tr><tr><td>operations</td><td>openai/gpt-oss-120b</td><td>2522</td><td>1,986</td><td>$0.00058</td></tr></table>
+    </div>
+    <div class="card">
+      <h2>Confidence calibration (analyst feedback)</h2>
+      <div class="kv"><span>Expected Calibration Error (ECE)</span><b>
+0.6173</b></div>
+      <div class="kv"><span>definite feedback samples</span><b>
+7</b></div>
+      <div style="margin-top:8px"><svg viewBox="0 0 320 260" xmlns="http://www.w3.org/2000/svg"><rect x="44" y="14" width="264" height="210" fill="#141a2e" stroke="#2a3350"/><line x1="110.0" y1="171.5" x2="308.0" y2="171.5" stroke="#2a3350" stroke-width="0.5"/><line x1="176.0" y1="119.0" x2="308.0" y2="119.0" stroke="#2a3350" stroke-width="0.5"/><line x1="242.0" y1="66.5" x2="308.0" y2="66.5" stroke="#2a3350" stroke-width="0.5"/><line x1="308.0" y1="14.0" x2="308.0" y2="14.0" stroke="#2a3350" stroke-width="0.5"/><line x1="44.0" y1="224.0" x2="308.0" y2="14.0" stroke="#5b6b94" stroke-dasharray="4 3" stroke-width="1"/><rect x="46.0" y="14.0" width="48.8" height="210.0" fill="#3fa7ff" opacity="0.75"/><circle cx="89.1" cy="188.1" r="3.5" fill="#ffd166"/><text x="70.4" y="240" font-size="9" fill="#8b96b5" text-anchor="middle">0.0-0.2</text><text x="70.4" y="252" font-size="9" fill="#8b96b5" text-anchor="middle">n=1</text><rect x="151.6" y="14.0" width="48.8" height="210.0" fill="#3fa7ff" opacity="0.75"/><circle cx="154.4" cy="136.2" r="3.5" fill="#ffd166"/><text x="176.0" y="240" font-size="9" fill="#8b96b5" text-anchor="middle">0.4-0.6</text><text x="176.0" y="252" font-size="9" fill="#8b96b5" text-anchor="middle">n=6</text><text x="44" y="10" font-size="9" fill="#8b96b5">observed accuracy</text><text x="160" y="259.5" font-size="0"> </text></svg></div>
+      <div class="kv" style="margin-top:6px"><span>bars = observed accuracy ·
+dots = mean predicted confidence · dashed = perfect calibration</span></div>
+    </div>
+    <div class="card">
+      <h2>Governance posture</h2>
+      <div class="kv"><span>LLM role</span><b>narrative synthesis only — never
+computes truth</b></div>
+      <div class="kv"><span>validator</span><b>6 deterministic checks, every claim
+traced to the insight JSON</b></div>
+      <div class="kv"><span>confidence override from small samples</span><b>
+False (gated
+at ≥ 5 samples)</b></div>
+      <div class="kv"><span>uncertainty handling</span><b>weak/abstain drivers must
+surface hedging language or the narrative is rejected</b></div>
+      <div class="kv"><span>telemetry transparency</span><b>latency, tokens and
+estimated cost recorded per narrative</b></div>
+      <div class="foot">Reproduce: <code>python evaluation/run_evaluation.py</code>
+· artifacts: <code>data/evaluation/</code></div>
+    </div>
+  </div>
+</div>
+</body></html>
