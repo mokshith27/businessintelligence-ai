@@ -46,3 +46,4 @@ tmp/
 temp/
 data/incoming/
 data/realtime/
+data/insights/multi_kpi_status.json
