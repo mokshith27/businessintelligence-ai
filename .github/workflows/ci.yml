@@ -25,13 +25,19 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       - name: Compile check (py_compile all modules)
         run: |
-          python -m compileall -q api dashboard drivers evidence llm personas scenarios actions anomaly causal feedback ingestion materiality nlp security telemetry roi
+          python -m compileall -q api dashboard drivers evidence llm personas scenarios actions anomaly causal feedback ingestion materiality nlp security telemetry roi evaluation
           echo "compileall OK"
 
-      - name: Run tests
+      - name: Run tests (with coverage)
         run: |
-          python -m pytest
+          python -m pytest --cov=api --cov=analytics --cov=evidence --cov=materiality --cov=llm --cov=security --cov=feedback --cov=roi --cov=drivers --cov=causal --cov=forecasting --cov-report=term-missing --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false

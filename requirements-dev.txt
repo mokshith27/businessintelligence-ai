@@ -1,0 +1,6 @@
+-r requirements.txt
+
+# test tooling (CI installs this file)
+pytest==9.1.1
+pytest-cov==7.0.0
+httpx>=0.28

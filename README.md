@@ -30,7 +30,7 @@ The project is designed around one core principle:
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
   <img src="https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
   <img src="https://img.shields.io/badge/DuckDB-FFF100?logo=duckdb&logoColor=black" alt="DuckDB">
-  <img src="https://img.shields.io/badge/tests-37%20passed-2ea44f" alt="37 tests passing">
+  <img src="https://codecov.io/gh/mokshith27/businessintelligence-ai/branch/main/graph/badge.svg" alt="Coverage">
   <img src="https://github.com/mokshith27/businessintelligence-ai/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/status-decision%20intelligence%20platform-8A2BE2" alt="Status: decision intelligence platform">
 </p>
@@ -43,6 +43,28 @@ The project is designed around one core principle:
 
 ---
 
+## 🎬 60-Second Demo
+
+<p align="center">
+  <img src="docs/img/demo.gif" alt="60-second demo: KPI drop detected on day 1 → driver investigation → evidence fusion → validated narrative → ROI close" width="820">
+</p>
+
+> Executive view, event 66: a 2am GMV drop is flagged on its **first anomalous day**, investigated down to
+> driver level, fused with review evidence, narrated in plain language (only after the grounding validator
+> passes), and closed with the **back-tested ROI** panel.
+
+<details>
+<summary><strong>How to regenerate <code>docs/img/demo.gif</code></strong> (maintainer note)</summary>
+
+1. Start the stack: `uvicorn api.main:app --port 8000` and `streamlit run dashboard/app.py`.
+2. Follow [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — Executive role, event 66 (fallback: event 37).
+3. Record the 0:00–3:00 arc (or just 0:25–2:35) with OBS / ScreenToGif / PowerShell + ffmpeg.
+4. Export as **GIF ≤ 10 MB** (720p, 12–15 fps) → save as `docs/img/demo.gif` → this section renders it.
+
+</details>
+
+---
+
 ## 1. What the Project Does
 
 A traditional dashboard can tell a business user:
@@ -50,6 +72,13 @@ A traditional dashboard can tell a business user:
 > "Marketplace GMV increased."
 
 BusinessIntelligence.ai goes further:
+
+<p align="center">
+  <img src="docs/img/architecture.svg" alt="BusinessIntelligence.ai decision pipeline: detect → investigate → decide → explain" width="860">
+</p>
+
+<details>
+<summary><strong>View the pipeline as text</strong></summary>
 
 ```text
 KPI movement
@@ -72,6 +101,9 @@ Recommended action
     ↓
 Role-specific narrative
 ```
+
+</details>
+
 
 The system is deliberately conservative:
 

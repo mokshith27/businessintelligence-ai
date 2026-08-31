@@ -27,6 +27,9 @@ Thumbs.db
 # Python tooling
 .pytest_cache/
 .mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
 
 # Logs
 *.log
