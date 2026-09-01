@@ -263,9 +263,8 @@ businessintelligence-ai/
 ├── Dockerfile                 # Containerized API + dashboard image
 ├── docker-compose.yml         # One-command deployment (api + dashboard)
 ├── requirements.txt           # Pinned Python dependencies
-├── .env.example               # Safe env-var template (commit this)
-├── .env                       # Your real secrets (NEVER commit — git-ignored)
-│
+├── .env.example               # Safe configuration template
+├── .gitignore                 # Excludes .env and local artifacts
 ├── ingestion/                 # Raw data → DuckDB warehouse, KPI & analytical tables
 ├── analytics/                 # KPI metric engine: gmv/decomposition/segmentation/cohort
 ├── anomaly/                   # Seasonal baselines, robust anomaly scoring, changepoints
@@ -299,7 +298,7 @@ businessintelligence-ai/
     ├── insights/              # latest_insight.json + persona stories & validations
     ├── causal/                # Causal effect, diagnostics, evidence, production status
     ├── scenarios/             # Scenario evaluation outputs
-    ├── realtime/             # Intraday ALERT/WATCH records (alerts.jsonl)
+    ├── realtime/              # Intraday ALERT/WATCH records (alerts.jsonl)
     ├── incoming/              # Drop zone for near-real-time CSV scans
     ├── roi/                   # ROI back-test outputs
     ├── evaluation/            # Hallucination evaluation harness outputs (git-ignored)
