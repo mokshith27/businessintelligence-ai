@@ -67,7 +67,10 @@ The project is designed around one core principle:
 1. Start the stack: `uvicorn api.main:app --port 8000` and `streamlit run dashboard/app.py`.
 2. Follow [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — Executive role, event 66 (fallback: event 37).
 3. Record the 0:00–3:00 arc (or just 0:25–2:35) with OBS / ScreenToGif / PowerShell + ffmpeg.
+   The staged capture script used for the current GIF lives at `record_demo.py` (frames in `record_demo_out/`).
 4. Export as **GIF ≤ 10 MB** (720p, 12–15 fps) → save as `docs/img/demo.gif` → this section renders it.
+
+**[View the GIF directly](docs/img/demo.gif)** if your viewer doesn't autoplay it.
 
 </details>
 
