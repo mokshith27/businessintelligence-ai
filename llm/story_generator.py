@@ -1422,27 +1422,40 @@ NEXT STEP:
 SECTION GUIDANCE (follow these instructions; NEVER copy any of this
 wording into the narrative text itself):
 
-- HEADLINE: two or more sentences stating the movement and its
-  business significance.
-- WHAT CHANGED: cite the before/after values, the absolute change,
-  and explain what the change means for the business.
-- MAIN DRIVER: explain whether volume or AOV contributed more. Use
-  the supplied decomposition values and percentages and interpret
-  their business meaning.
-- WHERE: name the most important observed contributors, including
-  their contribution values, shares, and evidence status when
-  available.
-- CUSTOMER EVIDENCE: summarize the supplied review/aspect evidence.
-  State both the event and comparison counts exactly as supplied.
-  NEVER compute or state the difference between two supplied counts.
-  Mention meaningful changes in review mentions or sentiment, but do
-  not present them as causal proof.
-- WHAT WE KNOW: respect exact evidence statuses for each driver and
-  explain uncertainty when root cause is not established.
-- NEXT STEP: use only the supplied action/decision evidence. Never
-  recommend acting on a CONTRADICTED hypothesis.
+- HEADLINE: exactly two sentences. Sentence one states the KPI, the
+  absolute BRL change and the event window. Sentence two states why
+  it matters to the business.
+- WHAT CHANGED: at least three sentences. Always cite the previous
+  value, the current value, and the absolute change exactly as
+  supplied in the movement evidence. Also cover the order-count
+  change and the AOV change when they are supplied, and explain what
+  the change means for the business.
+- MAIN DRIVER: at least three sentences. Name which of volume or AOV
+  contributed more, then cite BOTH effect values and BOTH percentage
+  shares exactly as supplied, and interpret what that mix means for
+  the business (orders vs basket size).
+- WHERE: at least three sentences. Name every driver supplied in the
+  top-contributors evidence, each with its contribution percentage
+  and its evidence status (weak, insufficient, or contradicted).
+- CUSTOMER EVIDENCE: at least three sentences. For the two or three
+  most significant aspects, state both the event-period count and
+  the comparison-period count exactly as supplied, and describe the
+  direction of the change in sentiment or volume. NEVER compute or
+  state the difference between two supplied counts. Do not present
+  review patterns as causal proof.
+- WHAT WE KNOW: at least three sentences. Summarize the evidence
+  status per key driver (which are weak, which are insufficient,
+  which are contradicted) and explain what remains uncertain and
+  why root cause is not established.
+- NEXT STEP: at least two sentences. Name the specific supplied
+  action(s) and the team that owns them. Never recommend acting on a
+  CONTRADICTED hypothesis.
   ABSTAIN means collect more evidence.
   WEAK means investigate rather than conclude.
+
+LENGTH: the finished narrative should be 320 to 400 words in total.
+Every section must contain real evidence-backed content; never
+substitute a section with a single vague sentence.
 
 STRICT RULES:
 - Output nothing before HEADLINE.
@@ -1534,17 +1547,34 @@ DATA QUALITY:
 SECTION GUIDANCE (follow these instructions; NEVER copy any of this
 wording into the narrative text itself):
 
-- KPI MOVEMENT: describe the movement and its magnitude.
-- ANALYTICAL DECOMPOSITION: explain the drivers, using the supplied
-  decomposition values and percentages and interpreting their
-  business meaning.
-- TOP INVESTIGATION AREAS: up to 3 items, each tied to a supplied
-  figure or evidence status.
-- CUSTOMER / REVIEW EVIDENCE: use the supplied review evidence. Do
-  not present review patterns as causal proof.
-- ACTIONS: use ONLY supplied decisions/actions. If no action is
-  justified, explicitly say that.
-- DATA QUALITY: use ONLY supplied data-quality information.
+- KPI MOVEMENT: at least three sentences. Cite the previous value,
+  the current value, and the absolute BRL change exactly as
+  supplied, and state what the magnitude means for operations.
+- ANALYTICAL DECOMPOSITION: at least three sentences. Cite the
+  volume effect and the AOV effect with BOTH of their percentage
+  shares exactly as supplied, and interpret what that mix means for
+  day-to-day operations (order flow vs basket size).
+- TOP INVESTIGATION AREAS: name up to three items. For each item
+  give its contribution percentage and its evidence status (weak,
+  insufficient, or contradicted), plus one concrete operational
+  question to investigate.
+- CUSTOMER / REVIEW EVIDENCE: at least three sentences. For the
+  most significant aspects, state both the event-period count and
+  the comparison-period count exactly as supplied and describe the
+  direction of the change. NEVER compute or state the difference
+  between two supplied counts. Do not present review patterns as
+  causal proof.
+- ACTIONS: name each supplied decision as a directive sentence
+  (which team investigates or collects what, for which driver). If
+  no action is justified for a driver, say so explicitly.
+- DATA QUALITY: at least two sentences using ONLY supplied
+  data-quality information: name the commerce source, whether review
+  text is available, and whether business context is available.
+  NEVER state record counts or totals.
+
+LENGTH: the finished narrative should be 280 to 360 words in total.
+Every section must contain real evidence-backed content; never
+substitute a section with a single vague sentence.
 
 STRICT RULES:
 - Output nothing before KPI MOVEMENT.

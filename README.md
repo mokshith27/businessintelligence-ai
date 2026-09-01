@@ -173,7 +173,11 @@ The system is deliberately conservative:
 | **Operations** | Operational drivers, actions, owners, monitoring |
 | **Analyst** | Full evidence, lineage, causal evidence, governance, feedback |
 
-The prototype uses application-level filtering rather than enterprise SSO/JWT/RBAC infrastructure.
+The dashboard and API enforce **role-based access end-to-end**: a JWT login gate
+(the `Exec`/`Ops`/`Analyst` personas are demo users only — production would use SSO /
+an identity provider), application-level role filtering on every insight, and a
+`/api/security/test` self-audit (details in §17). Enterprise SSO/RBAC are intentionally
+out of scope for this prototype.
 
 ### 🔁 Human-in-the-Loop Feedback
 Analysts classify an assessment as `CORRECT`, `INCORRECT`, or `MISSING_CONTEXT`. Feedback is stored as measurable calibration evidence — the system intentionally does **not** overwrite production confidence from a tiny sample.
@@ -259,11 +263,14 @@ Analysts classify an assessment as `CORRECT`, `INCORRECT`, or `MISSING_CONTEXT`.
 ```text
 businessintelligence-ai/
 ├── run_pipeline.py            # Orchestrates the full analytical pipeline
+├── Dockerfile                 # Containerized API + dashboard image
+├── docker-compose.yml         # One-command deployment (api + dashboard)
 ├── requirements.txt           # Pinned Python dependencies
 ├── .env.example               # Safe env-var template (commit this)
 ├── .env                       # Your real secrets (NEVER commit — git-ignored)
 │
 ├── ingestion/                 # Raw data → DuckDB warehouse, KPI & analytical tables
+├── analytics/                 # KPI metric engine: gmv/decomposition/segmentation/cohort
 ├── anomaly/                   # Seasonal baselines, robust anomaly scoring, changepoints
 ├── materiality/               # Materiality engine + multi-day event clustering
 ├── drivers/                   # GMV decomposition, segment tables, contribution, investigation
@@ -272,14 +279,19 @@ businessintelligence-ai/
 ├── actions/                   # Safe action recommendation engine
 ├── causal/                    # AIPW causal estimation, diagnostics, causal evidence
 ├── scenarios/                 # Controlled scenario engine, sparse-history, evaluation
+├── forecasting/               # KPI forecast models (auto-ARIMA) + forecast context
+├── roi/                       # ROI calculator + back-test service
+├── realtime/                  # Streaming analytics (featurizer, stream policy, supabase)
 ├── feedback/                  # Analyst feedback capture + calibration
 ├── security/                  # Role-based information filtering
 ├── personas/                  # Executive / Operations persona builders + tests
-├── llm/                       # Story generator + narrative validator (Groq/OpenRouter)
+├── llm/                       # Story generator + narrative validator (Groq/OpenRouter/Ollama)
 ├── telemetry/                 # Runtime & LLM usage telemetry
 ├── config/                    # KPI contracts + llm_config.yaml
 ├── api/                       # FastAPI application (api/main.py)
 ├── dashboard/                 # Streamlit application (dashboard/app.py)
+├── tests/                     # pytest suite: unit + API smoke tests
+├── docker/                    # Container helper scripts (entrypoint, seed)
 ├── docs/                      # GETTING_STARTED.md, ARCHITECTURE.md
 └── data/
     ├── raw/                   # Input CSVs (Olist + simulated business context)
@@ -290,6 +302,10 @@ businessintelligence-ai/
     ├── insights/              # latest_insight.json + persona stories & validations
     ├── causal/                # Causal effect, diagnostics, evidence, production status
     ├── scenarios/             # Scenario evaluation outputs
+    ├── realtime/             # Intraday ALERT/WATCH records (alerts.jsonl)
+    ├── incoming/              # Drop zone for near-real-time CSV scans
+    ├── roi/                   # ROI back-test outputs
+    ├── evaluation/            # Hallucination evaluation harness outputs (git-ignored)
     └── feedback/              # Feedback records + calibration report
 ```
 
@@ -482,13 +498,13 @@ Docker volumes, so restarts are instant once seeded.
 
 ## 7. Environment Variables Reference (`.env`)
 
-All variables are optional at the code level (safe defaults exist), but **an LLM API key is required** for narrative generation. Values are loaded once at module import via `load_dotenv()` in `llm/story_generator.py`; real values should live only in the local `.env` file.
+All variables are optional at the code level (safe defaults exist). **An LLM API key is required only if you use a cloud provider** — the bundled `.env.example` configures the fully-local Ollama setup (`local:qwen3:1.7b`, no key, no cloud calls). Values are loaded once at module import via `load_dotenv()` in `llm/story_generator.py`; real values should live only in the local `.env` file.
 
 ### Provider & model selection
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_PROVIDER` | `groq` | Primary narrative provider. Supported: `groq`, `openrouter`, `openai`, `anthropic`. Lowercased and trimmed automatically. |
+| `LLM_PROVIDER` | `groq` | Primary narrative provider. Supported: `local`, `groq`, `openrouter`, `openai`, `anthropic`. Lowercased and trimmed automatically. |
 | `LLM_MODEL` | `openai/gpt-oss-120b` | Model identifier for the primary provider. |
 | `LLM_FALLBACKS` | `openrouter:openrouter/free` | Comma-separated `provider:model` candidates tried in order if the primary model fails. Example: `openrouter:openrouter/free,openai:gpt-4o-mini`. |
 
@@ -507,10 +523,21 @@ The telemetry/health check reports only *whether* each key is configured (`groq_
 
 | Variable | Default | Description |
 |---|---|---|
-| `LLM_MAX_OUTPUT_TOKENS` | `800` | Maximum tokens per generated narrative. |
+| `LLM_MAX_OUTPUT_TOKENS` | `800` | Maximum tokens per generated narrative. The bundled `.env` raises this to `6000` for the longer local-model stories. |
 | `LLM_TEMPERATURE` | `0.1` | Sampling temperature. Low values keep narratives deterministic and reproducible. |
 | `LLM_REASONING_EFFORT` | `low` | Reasoning-effort hint for models that support it: `low`, `medium`, `high`. |
 | `LLM_DEBUG` | `true` | Verbose LLM debug logging. Accepts `1`, `true`, `yes`, `on`. |
+
+### Local provider settings (Ollama / LM Studio / llama.cpp / vLLM)
+
+| Variable | Default | Description |
+|---|---|---|
+| `LLM_BASE_URL` | `http://localhost:11434/v1` | Base URL of a local OpenAI-compatible inference server. LM Studio: `http://localhost:1234/v1`; llama.cpp / vLLM: their `/v1` endpoints. |
+| `LLM_LOCAL_API_MODE` | `ollama` | `ollama` = native `/api/chat` (thinking disabled — recommended for Qwen3); `openai` = generic `/v1/chat/completions` (LM Studio, llama.cpp server, vLLM). |
+| `LLM_LOCAL_TEMPERATURE` | `0.15` | Sampling temperature for the local model only. |
+| `LLM_LOCAL_REPEAT_PENALTY` | `1.3` | Repetition penalty — prevents Qwen3 loop stalls. |
+| `LLM_LOCAL_NUM_CTX` | `8192` | Local model context window (tokens). `12288` in the bundled `.env` to fit the longer narrative prompts. |
+| `LLM_CLEAN_RETRIES` | `2` | Number of section-cleaner retries before the router falls through to the next provider. |
 
 ### Runtime (set by the pipeline runner)
 
@@ -628,6 +655,7 @@ Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 | `POST` | `/api/simulation` | Prescriptive simulation: "what happens if we act" — applies an uplift to the forecast |
 | `POST` | `/api/watch/simulate-incoming` | Drop a synthetic intraday batch, scan it, and raise alerts (live demo moment) |
 | `GET` | `/api/watch/alerts` | Recent intraday alerts with wall-clock detection timestamps |
+| `POST` | `/api/watch/scan` | Scan `data/incoming/` for new files and raise alerts |
 | `POST` | `/api/feedback` | Submit analyst feedback |
 | `GET` | `/api/feedback` | List feedback records |
 | `GET` | `/api/calibration` | Feedback calibration report |
@@ -710,8 +738,8 @@ LLM_PROVIDER=local
 LLM_MODEL=qwen3:1.7b
 LLM_BASE_URL=http://localhost:11434/v1
 LLM_LOCAL_API_MODE=ollama
-LLM_LOCAL_NUM_CTX=8192
-LLM_FALLBACKS=local:qwen3:4b
+LLM_LOCAL_NUM_CTX=12288
+LLM_FALLBACKS=local:qwen3:4b,local:qwen3:8b
 ```
 
 Notes:
@@ -1002,11 +1030,13 @@ the required section headings and the section cleaner rejects every candidate.
 Fix:
 
 ```text
-LLM_LOCAL_NUM_CTX=8192
+LLM_LOCAL_NUM_CTX=12288
 ```
 
-and restart the API. You can verify prompt size versus context window by
-checking `prompt_eval_count` in an Ollama `/api/chat` response.
+(keep it at least 8192; the bundled `.env` ships with 12288 to fit the
+longer narrative prompts) and restart the API. You can verify prompt size
+versus context window by checking `prompt_eval_count` in an Ollama
+`/api/chat` response.
 
 ### AI narrative rejected by the evidence-grounding validator
 
@@ -1057,7 +1087,7 @@ Install the missing dependency: `python -m pip install python-dotenv` (included 
 This project is a decision-intelligence **prototype**, not a production enterprise analytics platform.
 
 1. The causal module uses observational data and cannot eliminate unmeasured confounding.
-2. Role-based filtering is application-level authorization, not enterprise authentication.
+2. Role-based auth is **application-level** (JWT login + role filtering), not enterprise SSO / identity-provider integration (IdP federation, MFA, OIDC) — genuine federated enterprise authentication is out of scope for this prototype.
 3. Feedback calibration requires sufficient real analyst feedback before it can meaningfully change confidence policy.
 4. Business context is simulated for controlled evaluation scenarios.
 5. The causal result is specific to the analyzed treatment/outcome relationship and should not be generalized to unrelated KPI movements.
