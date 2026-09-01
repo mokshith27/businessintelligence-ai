@@ -225,7 +225,10 @@ def compute_all_kpis(
 
     contracts = load_contracts()
 
-    con = duckdb.connect(str(db_path), read_only=True)
+    # Read-write to match every other connection in the API process:
+    # mixing read_only True/False on one file within a process raises
+    # "different configuration than existing connections".
+    con = duckdb.connect(str(db_path), read_only=False)
     try:
         kpis: dict[str, dict[str, Any]] = {}
         for kpi_id, column in DEFAULT_KPI_COLUMNS.items():

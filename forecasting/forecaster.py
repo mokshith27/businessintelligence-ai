@@ -242,7 +242,10 @@ def load_kpi_series(
     if not path.exists():
         raise FileNotFoundError(f"Warehouse not found: {path}")
 
-    con = duckdb.connect(str(path), read_only=True)
+    # Read-write to match every other connection in the API process:
+    # mixing read_only True/False on one file within a process raises
+    # "different configuration than existing connections".
+    con = duckdb.connect(str(path), read_only=False)
     try:
         rows = con.execute(
             f"""

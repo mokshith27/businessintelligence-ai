@@ -657,9 +657,16 @@ def get_connection():
             ),
         )
 
+    # IMPORTANT: keep the connection configuration identical to
+    # connect_database(). DuckDB forbids opening the same database
+    # file in one process with a mix of read_only True/False
+    # ("Can't open a connection to same database file with a
+    # different configuration than existing connections"), which
+    # surfaces as intermittent 500s when read and write endpoints
+    # run concurrently in the FastAPI thread pool.
     return duckdb.connect(
         str(DB_PATH),
-        read_only=True,
+        read_only=False,
     )
 
 
