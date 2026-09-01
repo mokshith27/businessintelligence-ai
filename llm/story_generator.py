@@ -834,31 +834,35 @@ Never convert currency.
 Format exactly:
 
 HEADLINE:
-Two concise sentences.
-
 WHAT CHANGED:
-Explain the KPI movement and business magnitude.
-
 MAIN DRIVER:
-Explain whether volume or AOV contributed more.
-Use the supplied decomposition values.
-
 WHERE:
-Mention only the most important observed segment contribution.
-
+CUSTOMER EVIDENCE:
 WHAT WE KNOW:
-State the evidence strength and uncertainty.
-Do not claim a root cause unless explicitly supported.
-
 NEXT STEP:
-Give the action that is actually justified by the supplied
-decision/action evidence.
+
+SECTION GUIDANCE (follow these; NEVER copy this wording into the
+narrative text):
+
+- HEADLINE: two concise sentences.
+- WHAT CHANGED: explain the KPI movement and business magnitude.
+- MAIN DRIVER: explain whether volume or AOV contributed more.
+  Use the supplied decomposition values.
+- WHERE: mention only the most important observed segment
+  contribution.
+- CUSTOMER EVIDENCE: summarize the supplied review evidence.
+- WHAT WE KNOW: state the evidence strength and uncertainty.
+  Do not claim a root cause unless explicitly supported.
+- NEXT STEP: give the action actually justified by the supplied
+  decision/action evidence.
 
 IMPORTANT:
 "Observed contribution" is not "causation".
 Do not invent explanations for why the movement happened.
 Finish every section completely.
 Keep the response below approximately 220 words.
+NEVER quote or copy any instruction or guidance text into the
+narrative output itself.
 
 Maximum length: approximately 250 words.
 
@@ -901,24 +905,24 @@ Never convert currency.
 Format exactly:
 
 KPI MOVEMENT:
-Explain the movement.
-
 ANALYTICAL DECOMPOSITION:
-Explain volume versus AOV.
-
 TOP INVESTIGATION AREAS:
-Mention at most three high-priority observed contributors.
-
 EVIDENCE:
-Respect the exact evidence statuses:
-SUPPORTED, PLAUSIBLE, WEAK, ABSTAIN, CONTRADICTED.
-
 ACTIONS:
-Only recommend actions explicitly permitted by the supplied
-decision/action fields.
-
 DATA QUALITY:
-Mention relevant limitations.
+
+SECTION GUIDANCE (follow these; NEVER copy this wording into the
+narrative text):
+
+- KPI MOVEMENT: explain the movement.
+- ANALYTICAL DECOMPOSITION: explain volume versus AOV.
+- TOP INVESTIGATION AREAS: mention at most three high-priority
+  observed contributors.
+- EVIDENCE: respect the exact evidence statuses:
+  SUPPORTED, PLAUSIBLE, WEAK, ABSTAIN, CONTRADICTED.
+- ACTIONS: only recommend actions explicitly permitted by the
+  supplied decision/action fields.
+- DATA QUALITY: mention relevant limitations.
 
 IMPORTANT:
 - Never invent a root cause.
@@ -933,6 +937,8 @@ IMPORTANT:
 - Prefer concise sentences over repeating numbers.
 - Do not repeat the same KPI value more than once unless necessary.
 - Keep the response below approximately 280 words.
+- NEVER quote or copy any instruction or guidance text into the
+  narrative output itself.
 
 Maximum length: approximately 300 words.
 Do not create a large table.
@@ -1399,48 +1405,44 @@ Never convert currency.
 
 Required format.
 
-OUTPUT EXACTLY THESE SEVEN SECTIONS, IN THIS ORDER.
-HEADING SPELLING IS EXACT. Use each heading below verbatim,
-singular form, with its colon. Never pluralize, rename, merge,
-or add headings. In particular the last heading is exactly
-"NEXT STEP:" with no "S".
+OUTPUT FORMAT — write EXACTLY these seven headings, each on its own
+line, each followed by your narrative paragraph. Copy the heading
+spelling verbatim (singular form, with its colon). Never pluralize,
+rename, merge, or add headings. In particular the last heading is
+exactly "NEXT STEP:" with no "S".
 
 HEADLINE:
-At least two full sentences that state the movement and its
-business significance.
-
 WHAT CHANGED:
-At least three full sentences. Cite the before/after values, the
-absolute change, and explain what the change means for the
-business.
-
 MAIN DRIVER:
-At least three full sentences. Explain whether volume or AOV
-contributed more. Use the supplied decomposition values and
-supplied decomposition percentages, and interpret their
-business meaning.
-
 WHERE:
-At least two full sentences naming the most important
-observed contributors, including their contribution values,
-shares, and evidence status when available.
-
 CUSTOMER EVIDENCE:
-At least two full sentences summarizing the supplied
-review/aspect evidence. Mention meaningful changes in review
-mentions or sentiment, but do not present them as causal proof.
-
 WHAT WE KNOW:
-At least three full sentences. Respect exact evidence statuses
-for each driver and explain uncertainty when root cause is not
-established.
-
 NEXT STEP:
-At least two full sentences using only the supplied
-action/decision evidence. Never recommend acting on a
-CONTRADICTED hypothesis.
-ABSTAIN means collect more evidence.
-WEAK means investigate rather than conclude.
+
+SECTION GUIDANCE (follow these instructions; NEVER copy any of this
+wording into the narrative text itself):
+
+- HEADLINE: two or more sentences stating the movement and its
+  business significance.
+- WHAT CHANGED: cite the before/after values, the absolute change,
+  and explain what the change means for the business.
+- MAIN DRIVER: explain whether volume or AOV contributed more. Use
+  the supplied decomposition values and percentages and interpret
+  their business meaning.
+- WHERE: name the most important observed contributors, including
+  their contribution values, shares, and evidence status when
+  available.
+- CUSTOMER EVIDENCE: summarize the supplied review/aspect evidence.
+  State both the event and comparison counts exactly as supplied.
+  NEVER compute or state the difference between two supplied counts.
+  Mention meaningful changes in review mentions or sentiment, but do
+  not present them as causal proof.
+- WHAT WE KNOW: respect exact evidence statuses for each driver and
+  explain uncertainty when root cause is not established.
+- NEXT STEP: use only the supplied action/decision evidence. Never
+  recommend acting on a CONTRADICTED hypothesis.
+  ABSTAIN means collect more evidence.
+  WEAK means investigate rather than conclude.
 
 STRICT RULES:
 - Output nothing before HEADLINE.
@@ -1454,6 +1456,10 @@ STRICT RULES:
 - Never repeat the same section a second time.
 - Never rewrite a section you have already written.
 - Never output analysis, reasoning, drafts, or commentary.
+- NEVER quote or copy any instruction, guidance, or template text
+  from this prompt into the narrative. In particular, never write
+  phrases such as "At least two full sentences", "use the supplied
+  evidence", "with its colon", or "moving to the next heading".
 - Never calculate a new number.
 - Never invent a number.
 - Only report numbers explicitly present in the evidence.
@@ -1513,34 +1519,32 @@ Write the Operations KPI narrative for the SELECTED EVENT.
 Use ONLY the supplied evidence.
 Do not calculate, infer, combine, or invent facts.
 
-OUTPUT EXACTLY THESE SIX SECTIONS, IN THIS ORDER.
-HEADING SPELLING IS EXACT. Use each heading below verbatim,
-singular form, with its colon. Never pluralize, rename, merge,
-or add headings.
+OUTPUT FORMAT — write EXACTLY these six headings, each on its own
+line, each followed by your narrative paragraph. Copy the heading
+spelling verbatim (singular form, with its colon). Never pluralize,
+rename, merge, or add headings.
 
 KPI MOVEMENT:
-At least three full sentences describing the movement and its
-magnitude.
-
 ANALYTICAL DECOMPOSITION:
-At least four full sentences explaining the drivers, using the
-supplied decomposition values and percentages and interpreting
-their business meaning.
-
 TOP INVESTIGATION AREAS:
-Up to 3 items, each one to two full sentences and tied to a
-supplied figure or evidence status.
-
 CUSTOMER / REVIEW EVIDENCE:
-At least three full sentences using the supplied review
-evidence. Do not present review patterns as causal proof.
-
 ACTIONS:
-At least two full sentences. Use ONLY supplied decisions/actions.
-If no action is justified, explicitly say that.
-
 DATA QUALITY:
-One to two sentences using ONLY supplied data-quality information.
+
+SECTION GUIDANCE (follow these instructions; NEVER copy any of this
+wording into the narrative text itself):
+
+- KPI MOVEMENT: describe the movement and its magnitude.
+- ANALYTICAL DECOMPOSITION: explain the drivers, using the supplied
+  decomposition values and percentages and interpreting their
+  business meaning.
+- TOP INVESTIGATION AREAS: up to 3 items, each tied to a supplied
+  figure or evidence status.
+- CUSTOMER / REVIEW EVIDENCE: use the supplied review evidence. Do
+  not present review patterns as causal proof.
+- ACTIONS: use ONLY supplied decisions/actions. If no action is
+  justified, explicitly say that.
+- DATA QUALITY: use ONLY supplied data-quality information.
 
 STRICT RULES:
 - Output nothing before KPI MOVEMENT.
@@ -1549,6 +1553,11 @@ STRICT RULES:
 - Never omit a heading.
 - Never add extra headings.
 - Never output analysis, reasoning, drafts, or commentary.
+- NEVER quote or copy any instruction, guidance, or template text
+  from this prompt into the narrative.
+- NEVER state record counts, review-count totals, confidence values,
+  or thresholds, even when the evidence contains them.
+- NEVER subtract two supplied numbers or state a computed difference.
 - Never calculate a new number.
 - Never sum or derive review counts.
 - Never invent a number.
@@ -1567,16 +1576,11 @@ section with the specific figures supplied; do not compress the
 story into one sentence per section.
 
 REMINDER:
-The finished narrative MUST contain at least 250 words. Every
-section MUST contain at least the number of sentences specified
-above. Expand with business interpretation of the supplied
-figures, never with invented facts.
-
-COMPLETION RULE:
-Your response is INCOMPLETE unless all six headings above
-appear exactly once, in order. Write the response from the
-first heading to the last without stopping early. Continue
-until you have produced every section.
+The finished narrative MUST contain all six headings in order.
+Your response is INCOMPLETE unless every heading above appears
+exactly once, in order. Write the response from the first heading
+to the last without stopping early. Continue until you have
+produced every section.
 
 EVIDENCE:
 {json.dumps(
@@ -2110,6 +2114,14 @@ def generate_story(
 
                         "max_tokens":
                             MAX_OUTPUT_TOKENS,
+
+                        # Qwen3 is a thinking model. Disable visible
+                        # reasoning so the full token budget goes to
+                        # the governed narrative. Ollama only honors
+                        # this on the OpenAI-compatible endpoint, so
+                        # the local API mode must be "openai".
+                        "think":
+                            False,
                     },
 
                     # Local inference can be much slower than a
@@ -2769,6 +2781,11 @@ def smoke_test_provider(
 
                 "max_tokens":
                     64,
+
+                # Keep the smoke test fast and reasoning-free on
+                # thinking models like Qwen3.
+                "think":
+                    False,
             },
 
             timeout=(10, 120),
@@ -2875,14 +2892,41 @@ def clean_generated_narrative(
         "\n",
     )
 
+    heading_alt = "|".join(
+        re.escape(h)
+        for h in sorted(
+            headings,
+            key=len,
+            reverse=True,
+        )
+    )
+
+    # A strict heading must be the only thing on its line (beyond
+    # optional list/number markers and bold markers).
     heading_re = re.compile(
-        r"(?im)^\s*(?:\*\*|__)?\s*"
-        r"(" +
-        "|".join(
-            re.escape(h)
-            for h in headings
-        ) +
-        r")\s*:?\s*(?:\*\*|__)?\s*$"
+        r"(?im)^\s*(?:[-*•·+]|\d{1,2}[.)]\s*)?"
+        r"(?:\*\*|__)?\s*"
+        r"("
+        + heading_alt
+        + r")\s*:?\s*(?:\*\*|__)?\s*$"
+    )
+
+    # Merge-tolerant preprocessing: models frequently write the heading
+    # and the start of its body on one line ("HEADLINE: The GMV fell").
+    # Split those into a strict heading line so one parser handles both
+    # output styles. Only lines that have body text after the colon are
+    # rewritten; bare heading lines are left untouched.
+    merge_re = re.compile(
+        r"(?im)^(\s*(?:[-*•·+]|\d{1,2}[.)]\s*)?"
+        r"(?:\*\*|__)?\s*"
+        r"("
+        + heading_alt
+        + r")\s*:)"
+        r"(?=[ \t]+\S)"
+    )
+    normalized = merge_re.sub(
+        r"\1\n",
+        normalized,
     )
 
     matches = list(
@@ -2908,62 +2952,169 @@ def clean_generated_narrative(
         )
     )
 
-    sections = []
-
-    for index, match in enumerate(matches):
-
-        title = match.group(1)
-
-        expected_index = None
-
-        for i, heading in enumerate(
+    idx_of = {
+        h.lower(): i
+        for i, h in enumerate(
             headings
-        ):
+        )
+    }
 
-            if heading.lower() == title.lower():
+    def hidx(m):
+        return idx_of.get(
+            m.group(1).lower(),
+        -1,
+        )
 
-                expected_index = i
-                break
+    # Split the heading matches into candidate runs. A new run starts
+    # whenever the first heading appears again (models emit a revised
+    # draft after commenting on the first draft).
+    runs = []
+    cur = []
+    for i, m in enumerate(
+        matches
+    ):
+        hi = hidx(m)
+        if hi == 0 and cur:
+            runs.append(cur)
+            cur = []
+        cur.append((i, hi))
+    if cur:
+        runs.append(cur)
 
-        if expected_index is None:
-            continue
+    # Total headings covered, whether it starts at the first expected
+    # heading, and total CLEAN body substance. Reasoning-polluted runs
+    # have huge raw bodies but little delivered narrative, so only
+    # sentences that read like business narrative count toward the
+    # score. Favour the last run with the best score.
+    best = None
+    best_score = (-1, -1, -1)
+    for run in runs:
+        his = [hi for _, hi in run]
+        seen = len(set(his))
+        first_ok = (
+            1 if his and his[0] == 0 else 0
+        )
 
+        clean_chars = 0
+        for pos, (i, hi) in enumerate(run):
+            m = matches[i]
+            nxt = (
+                matches[run[pos + 1][0]].start()
+                if pos + 1 < len(run)
+                else len(normalized)
+            )
+            body = normalized[m.end():nxt]
+            for part in re.split(
+                r"(?<=[.!?])\s+|\n+",
+                body,
+            ):
+                text = part.strip()
+                if (
+                    text
+                    and not _looks_like_reasoning(text)
+                ):
+                    clean_chars += len(text)
+
+        score = (seen, first_ok, clean_chars)
+        if score >= best_score:
+            best = run
+            best_score = score
+    run = best
+
+    # Recover a heading the model merged with its body on one line
+    # (e.g. "WHERE: SP state and RJ warehouse.").
+    lenient_re = re.compile(
+        r"(?im)^\s*(?:[-*•·+]|\d{1,2}[.)]\s*)?"
+        r"(?:\*\*|__)?\s*"
+        r"("
+        + heading_alt
+        + r")\s*:[\t ]+\S"
+    )
+
+    # Walk the chosen run and split the text into ordered sections.
+    sections = []
+    expected = 0
+    seg_start = matches[run[0][0]].start()
+    for k, (i, hi) in enumerate(run):
+        m = matches[i]
+
+        # Fill a gap: an expected heading was merged onto one line
+        # (e.g. "WHERE: body text"). Take it as its own section.
+        while expected < hi:
+            hname = headings[expected]
+            prev = matches[run[k - 1][0]] if k > 0 else None
+            lo = prev.end() if prev else seg_start
+            window = normalized[lo: min(m.start(), len(normalized))]
+            rec = lenient_re.search(window)
+            if rec and rec.group(1).lower() == hname.lower():
+                body = window[rec.end():].strip()
+                sections.append(f"{hname}:\n{body}")
+                expected += 1
+            else:
+                raise RuntimeError(
+                    f"{persona} narrative is incomplete. "
+                    f"Expected {headings}; missing {hname}."
+                )
+
+        # Normal case: heading on its own line.
         next_start = (
-            matches[index + 1].start()
-            if index + 1 < len(matches)
+            matches[run[k + 1][0]].start()
+            if k + 1 < len(run)
             else len(normalized)
         )
-
         body = normalized[
-            match.end():
+            m.end():
             next_start
         ].strip()
-
         if body:
-
             sections.append(
-                f"{headings[expected_index]}:\n{body}"
+                f"{headings[hi]}:\n{body}"
             )
+        expected = hi + 1
 
-    # Require every section in order.
-    found_names = [
-        section.split(
-            ":\n",
-            1
-        )[0]
-        for section in sections
-    ]
-
-    if found_names != headings:
-
-        raise RuntimeError(
-            f"{persona} narrative is incomplete. "
-            f"Expected {headings}; found {found_names}."
-        )
+    # Trailing expected headings merged onto the final line.
+    while expected < len(headings):
+        hname = headings[expected]
+        lo = matches[run[-1][0]].end() if run else 0
+        window = normalized[lo:]
+        rec = lenient_re.search(window)
+        if rec and rec.group(1).lower() == hname.lower():
+            body = window[rec.end():].strip()
+            sections.append(f"{hname}:\n{body}")
+            expected += 1
+        else:
+            raise RuntimeError(
+                f"{persona} narrative is incomplete. "
+                f"Expected {headings}; missing {hname}."
+            )
 
     cleaned = "\n\n".join(
         sections
     ).strip()
+
+    # Some local models continue past the last required section with a
+    # word-count audit, a "Revised draft", or draft commentary. Anything
+    # after the first such trailing marker is not part of the narrative.
+    trailer_re = re.compile(
+        r"(?im)^\s*(?:"
+        r"now[,:]?\s*let(?:'s|s)?|"
+        r"let(?:'s|s)?\s*(?:check|count|rewrite|draft|me\s+rewrite)|"
+        r"we'?ll\s+count|"
+        r"word\s*count|"
+        r"revised\s*draft|"
+        r"draft\s*[:]|"
+        r"i\s+hope|"
+        r"here\s+is\s+the\s+(?:final|revised|corrected)|"
+        r"the\s+word\s+count|"
+        r"total\s*(?:words|[:])|"
+        r"let'?s\s+draft|"
+        r"i'?ll\s+revise|"
+        r"revised\s+version"
+        r")"
+    )
+    mm = trailer_re.search(cleaned)
+    if mm:
+        cleaned = cleaned[: mm.start()].strip()
 
     forbidden_meta = (
         "The user wants me",
@@ -2988,6 +3139,348 @@ def clean_generated_narrative(
                 f"{persona} narrative contains "
                 "model meta-commentary."
             )
+
+    return cleaned
+
+
+def _collect_evidence_numbers(
+    obj,
+    acc,
+    key="",
+):
+    """
+    Walk the investigation structure and collect every numeric value
+    that narratives are allowed to cite.
+
+    Record-count fields (review_evidence_records and friends) are
+    deliberately excluded: the narrative validator treats record counts
+    as forbidden claims even when they are present in the evidence.
+    Percent-style variants (x*100 and x/100) are added so a rate stored
+    as a fraction matches its "0.79%" rendering and vice versa.
+    """
+
+    if isinstance(obj, bool) or obj is None:
+        return
+
+    if isinstance(obj, (int, float)):
+
+        if re.search(
+            r"(records|counts?|groups)$",
+            key or "",
+            flags=re.IGNORECASE,
+        ):
+            return
+
+        value = float(obj)
+
+        acc.add(value)
+        acc.add(value * 100)
+        acc.add(value / 100)
+
+        return
+
+    if isinstance(obj, str):
+
+        # Only short label/date strings are scanned. Long strings can
+        # be embedded JSON dumps or notes whose numbers (IDs, record
+        # counts, derived figures) are NOT narrative-safe, so they are
+        # skipped to keep the whitelist as strict as the validator's.
+        if len(obj) > 60 or obj.lstrip()[:1] in ("{", "["):
+            return
+
+        for match in re.finditer(
+            r"-?\d+(?:\.\d+)?",
+            obj.replace(",", ""),
+        ):
+
+            try:
+
+                acc.add(
+                    float(match.group()),
+                )
+
+            except ValueError:
+                pass
+
+        return
+
+    if isinstance(obj, dict):
+
+        for child_key, child in obj.items():
+            _collect_evidence_numbers(
+                child,
+                acc,
+                str(child_key),
+            )
+
+        return
+
+    if isinstance(obj, (list, tuple)):
+
+        for child in obj:
+            _collect_evidence_numbers(
+                child,
+                acc,
+                key,
+            )
+
+
+def _token_is_grounded(
+    token,
+    evidence_numbers,
+):
+    """
+    Return True when a numeric token in the narrative is backed by the
+    evidence whitelist (sign-insensitive, comma-tolerant, with a small
+    rounding tolerance so "4.17" matches an evidence value of 4.16687).
+    """
+
+    cleaned = token.replace(",", "").rstrip("%").rstrip(".")
+
+    try:
+
+        value = abs(float(cleaned))
+
+    except ValueError:
+        return True
+
+    # Small bare integers are ordinals/counts ("top 3", "6 days") that
+    # are not worth scrubbing.
+    if (
+        value < 11
+        and "." not in cleaned
+        and not token.rstrip(".").endswith("%")
+    ):
+        return True
+
+    for ev in evidence_numbers:
+
+        ev = abs(ev)
+
+        if abs(value - ev) <= 0.005 + 0.001 * ev:
+            return True
+
+        if round(value, 2) == round(ev, 2):
+            return True
+
+    return False
+
+
+# Sentence-level markers of visible chain-of-thought. Qwen3 emits its
+# deliberation as ordinary text, and sections can end up interleaved
+# with it. The delivered narrative must not contain model deliberation,
+# so sentences carrying these markers are dropped deterministically.
+_REASONING_MARKERS = (
+    "we have to",
+    "we must",
+    "we can write",
+    "we can list",
+    "we'll",
+    "we are to",
+    "we should",
+    "we need",
+    "we don't know",
+    "we do not know",
+    "we cannot",
+    "let's",
+    "lets ",
+    "let me",
+    "let us",
+    "i'll",
+    "i will",
+    "i think",
+    "i see",
+    "i need",
+    "i must",
+    "wait,",
+    "wait ",
+    "hmm",
+    "okay",
+    "the problem says",
+    "the instructions say",
+    "the instruction says",
+    "the rule says",
+    "the rules say",
+    "per rules",
+    "per the rules",
+    "instruction",
+    "but note",
+    "but wait",
+    "but the rule",
+    "but per",
+    "but we ",
+    "why not",
+    "why?",
+    "so i ",
+    "so we ",
+    "actually",
+    "alternatively",
+    "example:",
+    "given time",
+    "not sure",
+    "looks like",
+    "sounds like",
+    "two or more sentences",
+    "three full sentences",
+    "two full sentences",
+    "at least two",
+    "at least three",
+    "sentences stating",
+    "sentences that state",
+    "cite the before/after",
+    "cite the before and after",
+    "explain whether volume",
+    "explain business meaning",
+    "state evidence status",
+    "state the evidence strength",
+    "only use the action",
+    "name the most important",
+    "summarize the supplied",
+    "respect exact evidence",
+    "important note from the data",
+)
+
+
+def _looks_like_reasoning(text):
+    """
+    Return True when a sentence reads like model chain-of-thought
+    rather than delivered business narrative.
+    """
+
+    trimmed = text.strip().lstrip("-*•• ").strip()
+    low = trimmed.lower()
+
+    if "?" in trimmed:
+        return True
+
+    if " -> " in trimmed or "=>" in trimmed or " = " in trimmed:
+        return True
+
+    return any(
+        marker in low
+        for marker in _REASONING_MARKERS
+    )
+
+
+# Count phrasings that the claims extractor turns into unverifiable
+# "N m"-style tokens ("148 mentions" -> claim "148 m"), plus hosted
+# currency vocabulary that violates the BRL-only contract.
+_COUNT_PHRASE_RE = re.compile(
+    r"\b\d[\d,]*\s+(?:mentions?|reviewed|records?|rows?|entries)\b",
+    flags=re.IGNORECASE,
+)
+
+_FOREIGN_CURRENCY_RE = re.compile(
+    r"\b(?:USD|US\$|dollars?)\b|\$(?!\d)",
+    flags=re.IGNORECASE,
+)
+
+
+def scrub_unsupported_numbers(
+    story,
+    investigation,
+):
+    """
+    Deterministic grounding guard: remove every narrative sentence that
+    cites a number the evidence does not contain.
+
+    The LLM narrates; this layer enforces the project contract that only
+    evidence-backed figures survive into the delivered story. Sentences
+    are dropped (never rewritten) so no new claims are introduced, and a
+    neutral evidence-status sentence keeps any section from emptying.
+    """
+
+    evidence_numbers = set()
+    _collect_evidence_numbers(
+        investigation,
+        evidence_numbers,
+    )
+
+    token_re = re.compile(
+        r"\d[\d,]*(?:\.\d+)?%?",
+    )
+
+    rebuilt = []
+
+    for section in story.split(
+        "\n\n",
+    ):
+
+        if ":\n" not in section:
+
+            rebuilt.append(section)
+            continue
+
+        head, _, body = section.partition(
+            ":\n",
+        )
+
+        parts = re.split(
+            r"(?<=[.!?])\s+|\n+",
+            body,
+        )
+
+        kept = []
+
+        for part in parts:
+
+            text = part.strip()
+
+            if not text:
+                continue
+
+            if _looks_like_reasoning(text):
+                continue
+
+            if _COUNT_PHRASE_RE.search(
+                text,
+            ):
+                continue
+
+            if _FOREIGN_CURRENCY_RE.search(
+                text,
+            ):
+                continue
+
+            grounded = True
+
+            for token in token_re.findall(
+                text,
+            ):
+
+                if not _token_is_grounded(
+                    token,
+                    evidence_numbers,
+                ):
+
+                    grounded = False
+                    break
+
+            if grounded:
+                kept.append(text)
+
+        if not kept:
+
+            kept = [
+                "Evidence status limits the conclusions "
+                "available for this area.",
+            ]
+
+        rebuilt.append(
+            f"{head}:\n" + " ".join(kept)
+        )
+
+    cleaned = "\n\n".join(
+        rebuilt,
+    ).strip()
+
+    # A bare "$" (not part of the BRL "R$" pair) violates the currency
+    # contract; normalize it instead of losing the sentence.
+    cleaned = re.sub(
+        r"(?<![A-Za-z])\$(?=\d)",
+        "R$",
+        cleaned,
+    )
 
     return cleaned
 
@@ -3028,6 +3521,14 @@ def _generate_one_persona_candidate(
             validation_feedback,
         )
 
+    if provider == "local":
+
+        # Qwen3 (and other thinking models) burn output tokens on
+        # visible chain-of-thought before writing the narrative, which
+        # truncates the answer. "/no_think" is Qwen3's documented soft
+        # switch to disable the thinking phase for this request.
+        prompt = f"{prompt}\n\n/no_think"
+
     result = generate_story(
         client,
         prompt,
@@ -3039,6 +3540,15 @@ def _generate_one_persona_candidate(
     result["story"] = clean_generated_narrative(
         result["story"],
         persona,
+    )
+
+    # Deterministic grounding guard: drop any sentence that cites a
+    # number the investigation does not contain, and normalize a bare
+    # "$" to the contracted BRL "R$". This runs before validation so
+    # the delivered narrative only carries evidence-backed figures.
+    result["story"] = scrub_unsupported_numbers(
+        result["story"],
+        investigation,
     )
 
     result["telemetry"]["router_elapsed_ms"] = round(
