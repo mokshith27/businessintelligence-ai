@@ -17,9 +17,6 @@ on their **first anomalous day** — see the
 [Business Impact (ROI)](#12-llm-layer--narrative-governance) panel and
 `GET /api/roi/summary`.
 
-**Preparing a demo?** Follow [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) —
-a rehearsed 3-minute narrative arc from 2am detection to validated
-narrative to ROI close.
 
 The project is designed around one core principle:
 
