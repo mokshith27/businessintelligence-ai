@@ -36,6 +36,32 @@ The project is designed around one core principle:
 
 ---
 
+## 🧭 About
+
+**BusinessIntelligence.ai is an open decision-intelligence platform** that turns raw marketplace data into
+evidence-backed business decisions. Instead of another dashboard that only says *"GMV went up"*,
+it runs a complete, deterministic pipeline: it **detects** meaningful KPI movements on their first anomalous
+day, **investigates** exactly where the change came from (order volume vs. AOV, segment by segment),
+**fuses** structured metrics with unstructured review evidence, and only then **decides** — issuing a
+recommended action with an owner and monitoring plan, or an explicit **ABSTAIN** when the evidence is
+insufficient. LLMs are used strictly as storytellers on top of that analytical truth: every number in every
+generated narrative comes from the deterministic layer and is checked by a grounding validator before it
+reaches a user.
+
+| | |
+|---|---|
+| **🎯 Problem it solves** | Ops teams spot KPI drops days late and can't trace *why* they happened — recoverable revenue leaks away silently |
+| **💡 Approach** | Detect → investigate → fuse evidence → score confidence → safe action → role-specific, validator-grounded narrative |
+| **👤 Built for** | Heads of Marketplace Ops (Executive view), Ops Team Leads (Operations view), Business/Data Analysts (Analyst view) |
+| **🛠️ Stack** | Python 3.12 · FastAPI · DuckDB · React 18 + TypeScript · Hugging Face sentiment · Groq/OpenRouter/Ollama LLMs |
+| **📈 Measured impact** | R$17.5k recoverable GMV identified across 15 back-tested negative events (R$228k at risk), flagged ~1.5 days earlier than manual review |
+| **🛡️ Governance first** | JWT auth, role-filtered data, safe-action rules, explicit abstention, LLM telemetry and allowed/forbidden task policy |
+
+> **Live demo:** start the API and open **`http://127.0.0.1:8000/app`** — no build step required, the React
+> console ships prebuilt. One-click demo users let you experience all three personas in seconds.
+
+---
+
 ## 📑 Table of Contents
 
 | | | |
@@ -49,32 +75,7 @@ The project is designed around one core principle:
 | [19. Validation Philosophy](#19-validation-philosophy) | [20. Design Principles](#20-design-principles) | [21. Troubleshooting](#21-troubleshooting) |
 | [22. Known Limitations](#22-known-limitations) | [23. Documentation](#23-documentation--navigation) | |
 
-**Quick links:** 🎤 [3-minute demo script](docs/DEMO_SCRIPT.md) · 📖 [Getting started](docs/GETTING_STARTED.md) · 🏗️ [Architecture](docs/ARCHITECTURE.md) · 📊 [Measured LLM quality](#12-llm-layer--narrative-governance)
-
----
-
-## 🎬 60-Second Demo
-
-<p align="center">
-  <img src="docs/img/demo.gif" alt="60-second demo: KPI drop detected on day 1 → driver investigation → evidence fusion → validated narrative → ROI close" width="820">
-</p>
-
-> Executive view, event 66: a 2am GMV drop is flagged on its **first anomalous day**, investigated down to
-> driver level, fused with review evidence, narrated in plain language (only after the grounding validator
-> passes), and closed with the **back-tested ROI** panel.
-
-<details>
-<summary><strong>How to regenerate <code>docs/img/demo.gif</code></strong> (maintainer note)</summary>
-
-1. Start the stack: `uvicorn api.main:app --port 8000` and `streamlit run dashboard/app.py`.
-2. Follow [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — Executive role, event 66 (fallback: event 37).
-3. Record the 0:00–3:00 arc (or just 0:25–2:35) with OBS / ScreenToGif / PowerShell + ffmpeg.
-   The staged capture script used for the current GIF lives at `record_demo.py` (frames in `record_demo_out/`).
-4. Export as **GIF ≤ 10 MB** (720p, 12–15 fps) → save as `docs/img/demo.gif` → this section renders it.
-
-**[View the GIF directly](docs/img/demo.gif)** if your viewer doesn't autoplay it.
-
-</details>
+**Quick links:** 📖 [Getting started](docs/GETTING_STARTED.md) · 🏗️ [Architecture](docs/ARCHITECTURE.md) · 📊 [Measured LLM quality](#12-llm-layer--narrative-governance)
 
 ---
 
@@ -265,6 +266,7 @@ Analysts classify an assessment as `CORRECT`, `INCORRECT`, or `MISSING_CONTEXT`.
 ```text
 businessintelligence-ai/
 ├── run_pipeline.py            # Orchestrates the full analytical pipeline
+├── scripts/                   # One-off utilities (warehouse inspection, audits)
 ├── Dockerfile                 # Containerized API + dashboard image
 ├── docker-compose.yml         # One-command deployment (api + dashboard)
 ├── requirements.txt           # Pinned Python dependencies
@@ -1160,7 +1162,6 @@ This project is a decision-intelligence **prototype**, not a production enterpri
 
 ## 23. Documentation & Navigation
 
-- 🎤 **3-minute demo script** → [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) — rehearsed demo arc with Q&A ammunition
 - 📖 **Getting Started** → [`docs/GETTING_STARTED.md`](docs/GETTING_STARTED.md) — first-run guide
 - 🏗️ **Architecture walkthrough** → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — module map
 - 🤝 **Contributing** → [`CONTRIBUTING.md`](CONTRIBUTING.md)
