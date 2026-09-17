@@ -2138,6 +2138,8 @@ def root():
         "documentation":
             "/docs",
 
+        "frontend":
+            "/app",
 
     }
 
@@ -2295,3 +2297,53 @@ def watch_simulate_incoming():
     except Exception as exc:
         print(f"[ERROR] /api/watch/simulate-incoming: {exc}")
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+# ============================================================
+# FRONTEND (React console)
+# ------------------------------------------------------------
+# The commercial React/TypeScript console lives in frontend/ and
+# is built with `npm run build` into frontend/dist. It is served
+# by this API at /app (same origin, so no CORS in production).
+# The catch-all below serves static assets and falls back to
+# index.html so client-side routes (e.g. /app/dashboard/events)
+# survive a hard refresh.
+# ============================================================
+
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+
+FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/app")
+@app.get("/app/{full_path:path}")
+def frontend(full_path: str = ""):
+    """Serve the built React console with an SPA index.html fallback."""
+    if not FRONTEND_DIST.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Frontend build not found. Run `npm install && npm run build` "
+                "in the frontend/ directory, or use the Streamlit dashboard."
+            ),
+        )
+
+    if full_path:
+        candidate = (FRONTEND_DIST / full_path).resolve()
+        # Serve real files (JS/CSS bundles, images) only from inside dist/.
+        if candidate.is_file() and candidate.is_relative_to(FRONTEND_DIST.resolve()):
+            return FileResponse(candidate)
+
+    return FileResponse(FRONTEND_DIST / "index.html")

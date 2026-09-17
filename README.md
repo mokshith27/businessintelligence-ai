@@ -25,6 +25,8 @@ The project is designed around one core principle:
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React 18">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5">
   <img src="https://img.shields.io/badge/Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
   <img src="https://img.shields.io/badge/DuckDB-FFF100?logo=duckdb&logoColor=black" alt="DuckDB">
   <img src="https://codecov.io/gh/mokshith27/businessintelligence-ai/branch/main/graph/badge.svg" alt="Coverage">
@@ -41,7 +43,7 @@ The project is designed around one core principle:
 | [1. What the Project Does](#1-what-the-project-does) | [2. Key Capabilities](#2-key-capabilities) | [3. System Architecture](#3-system-architecture) |
 | [4. Tech Stack](#4-tech-stack) | [5. Project Structure](#5-project-structure) | [6. Getting Started](#6-getting-started--step-by-step) |
 | [7. Environment Variables](#7-environment-variables-reference-env) | [8. Analytical Pipeline](#8-the-analytical-pipeline) | [9. Generated Artifacts](#9-generated-artifacts) |
-| [10. API Reference](#10-api-reference) | [11. Dashboard](#11-dashboard) | [12. LLM Layer & Governance](#12-llm-layer--narrative-governance) |
+| [10. API Reference](#10-api-reference) | [11. Web Console & Dashboard](#11-web-console--dashboard) | [12. LLM Layer & Governance](#12-llm-layer--narrative-governance) |
 | [13. NLP / Sentiment](#13-nlp--sentiment-layer) | [14. Causal Analysis](#14-causal-analysis) | [15. Sparse-History Safety](#15-sparse-history-safety) |
 | [16. Scenario Evaluation](#16-controlled-scenario-evaluation) | [17. Role-Based Security](#17-role-based-security) | [18. Feedback Loop](#18-human-in-the-loop-feedback) |
 | [19. Validation Philosophy](#19-validation-philosophy) | [20. Design Principles](#20-design-principles) | [21. Troubleshooting](#21-troubleshooting) |
@@ -288,7 +290,11 @@ businessintelligence-ai/
 ├── telemetry/                 # Runtime & LLM usage telemetry
 ├── config/                    # KPI contracts + llm_config.yaml
 ├── api/                       # FastAPI application (api/main.py)
-├── dashboard/                 # Streamlit application (dashboard/app.py)
+├── frontend/                  # React 18 + TypeScript console (Vite) — served at /app
+│   ├── src/                   # Pages: Overview, Events, Narratives, Actions, Governance
+│   ├── dist/                  # Prebuilt bundle (commit-ready; rebuild with npm run build)
+│   └── package.json           # npm scripts + pinned JS dependencies
+├── dashboard/                 # Streamlit application (dashboard/app.py) — legacy UI
 ├── tests/                     # pytest suite: unit + API smoke tests
 ├── docker/                    # Container helper scripts (entrypoint, seed)
 ├── docs/                      # GETTING_STARTED.md, ARCHITECTURE.md
@@ -320,6 +326,7 @@ Follow these steps in order. Every command assumes **Windows PowerShell** from t
 |---|---|---|
 | Python | **3.12+** | 3.13 also supported; pinned deps (`numpy`, `scipy`) require ≥3.12 |
 | pip | latest | ships with Python |
+| Node.js | **18+** (optional) | only needed to rebuild the React console; a prebuilt `frontend/dist` ships in the repo |
 | Git | any recent | to clone the repository |
 | LLM API key | Groq and/or OpenRouter | required only for narrative generation |
 | Disk | ~4 GB | PyTorch + Transformers models are large |
@@ -437,7 +444,26 @@ uvicorn api.main:app --reload
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
 
-### Step 8 — Start the dashboard (terminal 2)
+### Step 8 — Start the frontends (terminals 2 & 3)
+
+**Option A — React console (recommended, no extra terminal):**
+
+The API automatically serves the prebuilt commercial console — just open:
+
+```
+http://127.0.0.1:8000/app
+```
+
+To rebuild it after modifying `frontend/src/`:
+
+```powershell
+cd frontend
+npm install
+npm run dev     # dev server at http://localhost:5173 (proxies /api to :8000)
+npm run build   # production bundle → frontend/dist (served at /app)
+```
+
+**Option B — Streamlit dashboard (legacy UI):**
 
 ```powershell
 streamlit run dashboard/app.py
@@ -453,7 +479,8 @@ Dashboard: `http://localhost:8501`
 | Canonical insight | `data/insights/latest_insight.json` exists |
 | Narratives generated | `data/insights/executive_story.json`, `operations_story.json` exist |
 | API healthy | `GET http://127.0.0.1:8000/api/insights/latest` returns JSON |
-| Dashboard loads | Role selector + KPI snapshot render at `localhost:8501` |
+| React console loads | Sign-in screen renders at `http://127.0.0.1:8000/app`; one-click demo login works |
+| Streamlit loads | Role selector + KPI snapshot render at `localhost:8501` |
 | LLM configured | `GET http://127.0.0.1:8000/api/security/test` and telemetry show `groq_key_configured: true` |
 
 ### Quick-start recap
@@ -466,7 +493,8 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env        # then add your API keys
 python run_pipeline.py             # build all artifacts
 uvicorn api.main:app --reload      # terminal 1
-streamlit run dashboard/app.py     # terminal 2
+# open http://127.0.0.1:8000/app   # React console (prebuilt, served by the API)
+# streamlit run dashboard/app.py   # optional legacy dashboard (terminal 2)
 ```
 
 ### One-command Docker deployment (for judges / reviewers)
@@ -480,7 +508,8 @@ single command:
 docker compose up --build
 ```
 
-- Dashboard → http://localhost:8501
+- React console → http://localhost:8000/app
+- Dashboard (legacy) → http://localhost:8501
 - API / Swagger → http://localhost:8000/docs
 
 Optional: enable a fully-local Ollama provider for private AI narratives:
@@ -631,6 +660,7 @@ Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 | Method | Endpoint | Purpose |
 |---|---|---|
 | `GET` | `/` | Service root: application info |
+| `GET` | `/app` | React console (SPA) with fallback for client-side routes |
 | `GET` | `/api/health` | Service health check |
 | `GET` | `/api/insights/latest` | Canonical insight |
 | `GET` | `/api/insights/latest/executive` | Executive view of latest insight |
@@ -666,22 +696,56 @@ Interactive Swagger UI: `http://127.0.0.1:8000/docs`
 
 ---
 
-## 11. Dashboard
+## 11. Web Console & Dashboard
+
+### React console (primary) — `http://127.0.0.1:8000/app`
+
+A commercial-grade **React 18 + TypeScript** single-page console (Vite build,
+Recharts) served same-origin by the FastAPI app — no CORS, no extra server.
+It authenticates with a **JWT** against `/api/auth/login` (role is derived from
+the signed token, never a free selector) and offers:
+
+- **Overview** — live KPI status strip (`/api/kpis/status`), back-tested ROI
+  panel with at-risk/recoverable GMV (`/api/roi/summary`), top-events chart,
+  and recommended actions with confidence bars;
+- **Events** — priority-ranked event table with one-click drill-down into the
+  full deterministic investigation (`/api/insights/event/{id}`): movement
+  decomposition, data quality, lineage, and ranked driver contributions with
+  SUPPORTED / ABSTAIN / WEAK / CONTRADICTED status chips;
+- **Narratives** — on-demand, evidence-grounded Executive / Operations stories
+  (`POST /api/insights/event/{id}/narrative`) with a **validator-passed /
+  rejected** badge and full LLM telemetry (model, latency, tokens, cost);
+- **Actions** — the safe-action register with decisions, owners, and monitoring
+  plans (ABSTAIN is always explicit);
+- **Governance** — the `/api/security/test` self-audit rendered as a
+  role-by-role visible/restricted matrix, plus the LLM governance policy
+  (allowed vs. forbidden LLM tasks).
+
+Design details: dark command-center theme with CSS custom properties,
+shimmer loading skeletons, responsive layout down to mobile, graceful
+degradation when the warehouse is absent.
+
+**Demo users** (see §17): `maria.exec` / `joao.ops` / `ana.analyst` with
+one-click buttons on the sign-in screen.
+
+Development:
+
+```powershell
+cd frontend
+npm install
+npm run dev      # http://localhost:5173 (proxies /api to :8000)
+npm run build    # production bundle → frontend/dist
+```
+
+### Streamlit dashboard (legacy) — `http://localhost:8501`
 
 ```powershell
 streamlit run dashboard/app.py
 ```
 
-Available at `http://localhost:8501`. The dashboard provides:
-
-- Role selection (Executive / Operations / Analyst);
-- KPI snapshot and event information;
-- GMV decomposition and driver investigation;
-- Recommended actions;
-- Evidence, governance, analytical lineage, and LLM governance panels;
-- Runtime telemetry and event history;
-- Analyst feedback capture and feedback calibration;
-- Validation center (scenarios, sparse history, causal).
+The Streamlit app remains available with the same feature set: role-based
+views, KPI snapshot, GMV decomposition, evidence/governance panels,
+validation center, feedback capture, and the demo recorder.
 
 ---
 
@@ -923,7 +987,7 @@ Average score         : 1.000
 
 **JWT authentication is now enforced at the API level** (in addition to the application-level role filtering below). `/api/auth/login` issues a signed HS256 token (role claim, 8h expiry); `/api/auth/me` validates it. Set `AUTH_DISABLED=1` in `.env` to bypass auth for local development — it is **enabled by default**.
 
-**The dashboard enforces this end-to-end**: the Streamlit UI opens with a login gate that authenticates against `/api/auth/login` (form + one-click demo buttons for each role). The session role is derived from the JWT's role claim — not a free-choice selector — and the sidebar shows the signed-in identity with a **Log out** button that clears the session.
+**The dashboards enforce this end-to-end**: the React console (`/app`) opens with a sign-in gate that authenticates against `/api/auth/login` (form + one-click demo buttons for each role); the session role is derived from the JWT's role claim — not a free-choice selector — and the sidebar shows the signed-in identity with a **Log out** button that clears the session. The Streamlit dashboard provides the same gate.
 
 **Demo users** (passwords are for the demo only; production would use SSO / an identity provider):
 

@@ -53,3 +53,7 @@ data/insights/multi_kpi_status.json
 
 # Generated evaluation artifacts (rebuild with: python evaluation/run_evaluation.py)
 data/evaluation/
+
+# Frontend (React console)
+frontend/node_modules/
+frontend/tsconfig.tsbuildinfo
