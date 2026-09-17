@@ -34,12 +34,16 @@ jobs:
 
       - name: Compile check (py_compile all modules)
         run: |
-          python -m compileall -q api dashboard drivers evidence llm personas scenarios actions anomaly causal feedback ingestion materiality nlp security telemetry roi evaluation
+          python -m compileall -q backend/api backend/dashboard backend/drivers backend/evidence backend/personas backend/scenarios backend/actions backend/anomaly backend/causal backend/feedback backend/ingestion backend/materiality backend/nlp backend/security backend/telemetry backend/roi backend/evaluation llm
           echo "compileall OK"
 
       - name: Run tests (with coverage)
+        env:
+          # backend/ on the import path so `api`, `drivers`, ... resolve;
+          # `llm` resolves from the repo root.
+          PYTHONPATH: backend
         run: |
-          python -m pytest --cov=api --cov=analytics --cov=evidence --cov=materiality --cov=llm --cov=security --cov=feedback --cov=roi --cov=drivers --cov=causal --cov=forecasting --cov-report=term-missing --cov-report=xml
+          python -m pytest backend/tests --cov=api --cov=analytics --cov=evidence --cov=materiality --cov=llm --cov=security --cov=feedback --cov=roi --cov=drivers --cov=causal --cov=forecasting --cov-report=term-missing --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

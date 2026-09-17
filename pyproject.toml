@@ -18,8 +18,9 @@ exclude = [
     ".venv",
     "venv",
     "__pycache__",
-    "data",
+    "backend/data",
     "docs",
+    "frontend",
 ]
 
 [tool.ruff.lint]
@@ -33,4 +34,4 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 # dashboard/app.py is a single-file Streamlit app; allow its conventions
-"dashboard/app.py" = ["F811"]
+"backend/dashboard/app.py" = ["F811"]

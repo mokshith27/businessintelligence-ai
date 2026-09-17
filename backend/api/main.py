@@ -1,9 +1,27 @@
-from pathlib import Path
 import json
 import math
 import re
+import sys
 from datetime import date, datetime
+from pathlib import Path
 from typing import Optional
+
+# ------------------------------------------------------------
+# Path bootstrap.
+#
+# After the repository restructure the analytical packages live in
+# ``backend/`` while the LLM layer (``llm/``) and the React console
+# (``frontend/``) stay at the repository root. Importing this module
+# from any working directory therefore requires both roots on
+# ``sys.path``:
+#   - ``backend/``  → security, drivers, evidence, analytics, api, ...
+#   - repo root     → llm (story generator + narrative validator)
+# ------------------------------------------------------------
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+_REPO_ROOT = _BACKEND_ROOT.parent
+for _path in (str(_BACKEND_ROOT), str(_REPO_ROOT)):
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
 import duckdb
 from fastapi import FastAPI, HTTPException, Query
@@ -2313,7 +2331,7 @@ def watch_simulate_incoming():
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
+FRONTEND_DIST = _REPO_ROOT / "frontend" / "dist"
 
 app.add_middleware(
     CORSMiddleware,

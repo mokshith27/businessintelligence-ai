@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-08-31T22:12:45",
+  "warehouse": "businessintelligence.duckdb",
+  "kpis_evaluated": 5,
+  "flagged_count": 0,
+  "kpis": {
+    "gmv": {
+      "kpi_id": "marketplace_gmv",
+      "name": "Marketplace GMV",
+      "formula": "SUM(fact_order_items_enriched.price)",
+      "access_roles": [
+        "executive",
+        "operations"
+      ],
+      "sensitivity": "internal",
+      "status": "NORMAL",
+      "latest_value": 145.0,
+      "latest_date": "2018-09-03 00:00:00",
+      "previous_value": 1546.04,
+      "change_pct": -0.906212,
+      "z_score": -2.3785,
+      "baseline_mean": 29298.330357,
+      "flagged": false,
+      "material": false,
+      "anomalous": true,
+      "adverse": false,
+      "reason": "change -90.62% (threshold +5%), z=-2.38 (threshold 2.0)"
+    },
+    "orders": {
+      "kpi_id": "marketplace_orders",
+      "name": "Marketplace Orders",
+      "formula": "COUNT(DISTINCT fact_orders_enriched.order_id)",
+      "access_roles": [
+        "executive",
+        "operations"
+      ],
+      "sensitivity": "internal",
+      "status": "NORMAL",
+      "latest_value": 1.0,
+      "latest_date": "2018-09-03 00:00:00",
+      "previous_value": 11.0,
+      "change_pct": -0.909091,
+      "z_score": -2.4672,
+      "baseline_mean": 212.446429,
+      "flagged": false,
+      "material": false,
+      "anomalous": true,
+      "adverse": false,
+      "reason": "change -90.91% (threshold +5%), z=-2.47 (threshold 2.0)"
+    },
+    "aov": {
+      "kpi_id": "aov",
+      "name": "Aov",
+      "formula": "",
+      "access_roles": [
+        "executive",
+        "operations",
+        "analyst"
+      ],
+      "sensitivity": "internal",
+      "status": "NORMAL",
+      "latest_value": 145.0,
+      "latest_date": "2018-09-03 00:00:00",
+      "previous_value": 140.549091,
+      "change_pct": 0.031668,
+      "z_score": 0.328,
+      "baseline_mean": 137.076739,
+      "flagged": false,
+      "material": false,
+      "anomalous": false,
+      "adverse": false,
+      "reason": "change +3.17% (threshold +10%), z=0.33 (threshold 2.0)"
+    },
+    "late_delivery_rate": {
+      "kpi_id": "late_delivery_rate",
+      "name": "Late Delivery Rate",
+      "formula": "COUNT(delivered orders with delivery_delay_days > 0) / COUNT(delivered orders)",
+      "access_roles": [
+        "operations",
+        "executive"
+      ],
+      "sensitivity": "internal",
+      "status": "NORMAL",
+      "latest_value": 0.0,
+      "latest_date": "2018-08-29 00:00:00",
+      "previous_value": 0.0,
+      "change_pct": null,
+      "z_score": -1.2298,
+      "baseline_mean": 0.042431,
+      "flagged": false,
+      "material": false,
+      "anomalous": false,
+      "adverse": false,
+      "reason": "insufficient baseline"
+    },
+    "review_score": {
+      "kpi_id": "customer_review_score",
+      "name": "Customer Review Score",
+      "formula": "AVG(fact_reviews.review_score)",
+      "access_roles": [
+        "executive",
+        "operations"
+      ],
+      "sensitivity": "internal",
+      "status": "NORMAL",
+      "latest_value": 4.216931,
+      "latest_date": "2018-08-31 00:00:00",
+      "previous_value": 4.322667,
+      "change_pct": -0.024461,
+      "z_score": 0.1694,
+      "baseline_mean": 4.142987,
+      "flagged": false,
+      "material": false,
+      "anomalous": false,
+      "adverse": false,
+      "reason": "change -2.45% (threshold +5%), z=0.17 (threshold 2.0)"
+    }
+  },
+  "flagged": []
+}

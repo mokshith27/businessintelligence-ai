@@ -263,57 +263,69 @@ Analysts classify an assessment as `CORRECT`, `INCORRECT`, or `MISSING_CONTEXT`.
 
 ## 5. Project Structure
 
+The repository is organized into **three top-level folders** — `frontend/`
+(React console), `backend/` (FastAPI + analytical packages), and `llm/`
+(LLM narrative layer) — plus shared infrastructure:
+
 ```text
 businessintelligence-ai/
-├── run_pipeline.py            # Orchestrates the full analytical pipeline
-├── scripts/                   # One-off utilities (warehouse inspection, audits)
-├── Dockerfile                 # Containerized API + dashboard image
-├── docker-compose.yml         # One-command deployment (api + dashboard)
-├── requirements.txt           # Pinned Python dependencies
-├── .env.example               # Safe configuration template
-├── .gitignore                 # Excludes .env and local artifacts
-├── ingestion/                 # Raw data → DuckDB warehouse, KPI & analytical tables
-├── analytics/                 # KPI metric engine: gmv/decomposition/segmentation/cohort
-├── anomaly/                   # Seasonal baselines, robust anomaly scoring, changepoints
-├── materiality/               # Materiality engine + multi-day event clustering
-├── drivers/                   # GMV decomposition, segment tables, contribution, investigation
-├── nlp/                       # Review aspect tagging + aspect-level sentiment
-├── evidence/                  # Evidence graph, review evidence, confidence, insight build
-├── actions/                   # Safe action recommendation engine
-├── causal/                    # AIPW causal estimation, diagnostics, causal evidence
-├── scenarios/                 # Controlled scenario engine, sparse-history, evaluation
-├── forecasting/               # KPI forecast models (auto-ARIMA) + forecast context
-├── roi/                       # ROI calculator + back-test service
-├── realtime/                  # Streaming analytics (featurizer, stream policy, supabase)
-├── feedback/                  # Analyst feedback capture + calibration
-├── security/                  # Role-based information filtering
-├── personas/                  # Executive / Operations persona builders + tests
-├── llm/                       # Story generator + narrative validator (Groq/OpenRouter/Ollama)
-├── telemetry/                 # Runtime & LLM usage telemetry
-├── config/                    # KPI contracts + llm_config.yaml
-├── api/                       # FastAPI application (api/main.py)
-├── frontend/                  # React 18 + TypeScript console (Vite) — served at /app
-│   ├── src/                   # Pages: Overview, Events, Narratives, Actions, Governance
-│   ├── dist/                  # Prebuilt bundle (commit-ready; rebuild with npm run build)
-│   └── package.json           # npm scripts + pinned JS dependencies
-├── dashboard/                 # Streamlit application (dashboard/app.py) — legacy UI
-├── tests/                     # pytest suite: unit + API smoke tests
-├── docker/                    # Container helper scripts (entrypoint, seed)
-├── docs/                      # GETTING_STARTED.md, ARCHITECTURE.md
-└── data/
-    ├── raw/                   # Input CSVs (Olist + simulated business context)
-    │   ├── olist/             # Orders, items, payments, reviews, customers, sellers…
-    │   ├── funnel/            # Closed deals + marketing qualified leads
-    │   └── simulated/         # business_context.csv
-    ├── warehouse/             # businessintelligence.duckdb (generated)
-    ├── insights/              # latest_insight.json + persona stories & validations
-    ├── causal/                # Causal effect, diagnostics, evidence, production status
-    ├── scenarios/             # Scenario evaluation outputs
-    ├── realtime/              # Intraday ALERT/WATCH records (alerts.jsonl)
-    ├── incoming/              # Drop zone for near-real-time CSV scans
-    ├── roi/                   # ROI back-test outputs
-    ├── evaluation/            # Hallucination evaluation harness outputs (git-ignored)
-    └── feedback/              # Feedback records + calibration report
+├── frontend/                    # React 18 + TypeScript console (Vite) — served at /app
+│   ├── src/                     # Pages: Overview, Events, Narratives, Actions, Governance
+│   ├── dist/                    # Prebuilt bundle (commit-ready; rebuild with npm run build)
+│   └── package.json             # npm scripts + pinned JS dependencies
+├── backend/                     # FastAPI service + deterministic analytical pipeline
+│   ├── api/                     # FastAPI application (api/main.py)
+│   ├── run_pipeline.py          # Orchestrates the full analytical pipeline
+│   ├── pytest.ini               # Test configuration (run pytest from backend/)
+│   ├── tests/                   # pytest suite: unit + API smoke tests
+│   ├── ingestion/               # Raw data → DuckDB warehouse, KPI & analytical tables
+│   ├── analytics/               # KPI metric engine: gmv/decomposition/segmentation/cohort
+│   ├── anomaly/                 # Seasonal baselines, robust anomaly scoring, changepoints
+│   ├── materiality/             # Materiality engine + multi-day event clustering
+│   ├── drivers/                 # GMV decomposition, segment tables, contribution, investigation
+│   ├── nlp/                     # Review aspect tagging + aspect-level sentiment
+│   ├── evidence/                # Evidence graph, review evidence, confidence, insight build
+│   ├── actions/                 # Safe action recommendation engine
+│   ├── causal/                  # AIPW causal estimation, diagnostics, causal evidence
+│   ├── scenarios/               # Controlled scenario engine, sparse-history, evaluation
+│   ├── forecasting/             # KPI forecast models (auto-ARIMA) + forecast context
+│   ├── roi/                     # ROI calculator + back-test service
+│   ├── realtime/                # Streaming analytics (featurizer, stream policy, supabase)
+│   ├── feedback/                # Analyst feedback capture + calibration
+│   ├── security/                # JWT auth + role-based information filtering
+│   ├── personas/                # Executive / Operations persona builders + tests
+│   ├── evaluation/              # Hallucination-bounded LLM evaluation harness
+│   ├── config/                  # KPI contracts + llm_config.yaml
+│   ├── dashboard/               # Streamlit application (legacy UI)
+│   └── data/                    # raw/ CSVs + warehouse + generated insight artifacts
+├── llm/                         # LLM layer: story generator + narrative validator
+├── docker/                      # Container helper scripts (entrypoint, seed)
+├── scripts/                     # One-off utilities (warehouse inspection, audits)
+├── docs/                        # GETTING_STARTED.md, ARCHITECTURE.md
+├── Dockerfile                   # Containerized API + dashboard image
+├── docker-compose.yml           # One-command deployment (api + dashboard)
+├── requirements.txt             # Pinned Python dependencies
+├── .env.example                 # Safe configuration template
+└── .gitignore                   # Excludes .env and local artifacts
+```
+
+Inside `data/`:
+
+```text
+backend/data/
+├── raw/                         # Input CSVs (Olist + simulated business context)
+│   ├── olist/                   # Orders, items, payments, reviews, customers, sellers…
+│   ├── funnel/                  # Closed deals + marketing qualified leads
+│   └── simulated/               # business_context.csv
+├── warehouse/                   # businessintelligence.duckdb (generated)
+├── insights/                    # latest_insight.json + persona stories & validations
+├── causal/                      # Causal effect, diagnostics, evidence, production status
+├── scenarios/                   # Scenario evaluation outputs
+├── realtime/                    # Intraday ALERT/WATCH records (alerts.jsonl)
+├── incoming/                    # Drop zone for near-real-time CSV scans
+├── roi/                         # ROI back-test outputs
+├── evaluation/                  # Hallucination evaluation harness outputs (git-ignored)
+└── feedback/                    # Feedback records + calibration report
 ```
 
 ---
@@ -403,22 +415,23 @@ The full variable-by-variable reference is in [Section 7](#7-environment-variabl
 
 ### Step 5 — Data setup
 
-The pipeline reads raw CSVs from `data/raw/`:
+The pipeline reads raw CSVs from `backend/data/raw/`:
 
 ```text
-data/raw/olist/       → orders, order_items, order_payments, order_reviews,
-                        customers, sellers, products, geolocation, category translation
-data/raw/funnel/      → closed deals, marketing qualified leads
-data/raw/simulated/   → business_context.csv
+backend/data/raw/olist/       → orders, order_items, order_payments, order_reviews,
+                                customers, sellers, products, geolocation, category translation
+backend/data/raw/funnel/      → closed deals, marketing qualified leads
+backend/data/raw/simulated/   → business_context.csv
 ```
 
-A fresh clone includes these files. If you removed them, restore the Olist e-commerce dataset (public Kaggle dataset) into `data/raw/olist/` before running the pipeline.
+A fresh clone includes these files. If you removed them, restore the Olist e-commerce dataset (public Kaggle dataset) into `backend/data/raw/olist/` before running the pipeline.
 
 ### Step 6 — Run the analytical pipeline
 
 This is the **one command** that builds every analytical artifact end-to-end:
 
 ```powershell
+cd backend
 python run_pipeline.py
 ```
 
@@ -440,6 +453,7 @@ Steps completed: 21/21
 ### Step 7 — Start the API (terminal 1)
 
 ```powershell
+cd backend
 uvicorn api.main:app --reload
 ```
 
@@ -477,9 +491,9 @@ Dashboard: `http://localhost:8501`
 
 | Check | How |
 |---|---|
-| Warehouse built | `data/warehouse/businessintelligence.duckdb` exists |
-| Canonical insight | `data/insights/latest_insight.json` exists |
-| Narratives generated | `data/insights/executive_story.json`, `operations_story.json` exist |
+| Warehouse built | `backend/data/warehouse/businessintelligence.duckdb` exists |
+| Canonical insight | `backend/data/insights/latest_insight.json` exists |
+| Narratives generated | `backend/data/insights/executive_story.json`, `operations_story.json` exist |
 | API healthy | `GET http://127.0.0.1:8000/api/insights/latest` returns JSON |
 | React console loads | Sign-in screen renders at `http://127.0.0.1:8000/app`; one-click demo login works |
 | Streamlit loads | Role selector + KPI snapshot render at `localhost:8501` |
@@ -493,10 +507,11 @@ cd businessintelligence-ai
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env        # then add your API keys
-python run_pipeline.py             # build all artifacts
-uvicorn api.main:app --reload      # terminal 1
+cd backend
+python run_pipeline.py             # build all artifacts (from backend/)
+uvicorn api.main:app --reload      # terminal 1 (from backend/)
 # open http://127.0.0.1:8000/app   # React console (prebuilt, served by the API)
-# streamlit run dashboard/app.py   # optional legacy dashboard (terminal 2)
+# streamlit run dashboard/app.py   # optional legacy dashboard (terminal 2, from backend/)
 ```
 
 ### One-command Docker deployment (for judges / reviewers)
@@ -623,26 +638,26 @@ The telemetry/health check reports only *whether* each key is configured (`groq_
 The most useful outputs (all generated locally by the pipeline):
 
 ```text
-data/insights/latest_insight.json                # Canonical insight (single source of truth)
-data/insights/executive_story.json               # Executive narrative
-data/insights/operations_story.json              # Operations narrative
-data/insights/executive_validation.json          # Executive narrative validation
-data/insights/operations_validation.json         # Operations narrative validation
+backend/data/insights/latest_insight.json                # Canonical insight (single source of truth)
+backend/data/insights/executive_story.json               # Executive narrative
+backend/data/insights/operations_story.json              # Operations narrative
+backend/data/insights/executive_validation.json          # Executive narrative validation
+backend/data/insights/operations_validation.json         # Operations narrative validation
 
-data/causal/delivery_review_causal_effect.json   # Late-delivery → review-score estimate
-data/causal/causal_diagnostics.json              # Overlap/balance diagnostics
-data/causal/causal_evidence_record.json          # Causal evidence record
-data/causal/causal_production_status.json        # Production status (may downgrade evidence)
+backend/data/causal/delivery_review_causal_effect.json   # Late-delivery → review-score estimate
+backend/data/causal/causal_diagnostics.json              # Overlap/balance diagnostics
+backend/data/causal/causal_evidence_record.json          # Causal evidence record
+backend/data/causal/causal_production_status.json        # Production status (may downgrade evidence)
 
-data/scenarios/scenario_evaluation.json          # Controlled scenario scorecard
-data/scenarios/scenario_engine_results.json      # Per-scenario engine results
-data/scenarios/engine_evaluation.json            # Engine-level evaluation
-data/scenarios/sparse_history_scenario.json      # Sparse-history ABSTAIN check
+backend/data/scenarios/scenario_evaluation.json          # Controlled scenario scorecard
+backend/data/scenarios/scenario_engine_results.json      # Per-scenario engine results
+backend/data/scenarios/engine_evaluation.json            # Engine-level evaluation
+backend/data/scenarios/sparse_history_scenario.json      # Sparse-history ABSTAIN check
 
-data/feedback/feedback_records.json              # Analyst feedback
-data/feedback/calibration_report.json            # Feedback calibration
+backend/data/feedback/feedback_records.json              # Analyst feedback
+backend/data/feedback/calibration_report.json            # Feedback calibration
 
-data/warehouse/businessintelligence.duckdb       # DuckDB analytical warehouse
+backend/data/warehouse/businessintelligence.duckdb       # DuckDB analytical warehouse
 ```
 
 These artifacts make the analytical process **inspectable and reproducible**. They are not expected to exist in a fresh clone until the pipeline runs.
@@ -651,9 +666,10 @@ These artifacts make the analytical process **inspectable and reproducible**. Th
 
 ## 10. API Reference
 
-Start FastAPI from the project root:
+Start FastAPI from the `backend/` directory:
 
 ```powershell
+cd backend
 uvicorn api.main:app --reload
 ```
 
@@ -742,6 +758,7 @@ npm run build    # production bundle → frontend/dist
 ### Streamlit dashboard (legacy) — `http://localhost:8501`
 
 ```powershell
+cd backend
 streamlit run dashboard/app.py
 ```
 

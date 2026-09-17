@@ -14,10 +14,15 @@ from groq import Groq
 # PATHS
 # ============================================================
 
+# The LLM layer lives at the repository root (outside backend/),
+# so PROJECT_ROOT is one level up from this file's package.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+# Insight artifacts moved with the analytical backend (backend/data).
+BACKEND_ROOT = PROJECT_ROOT / "backend"
+
 INSIGHT_PATH = (
-    PROJECT_ROOT
+    BACKEND_ROOT
     / "data"
     / "insights"
     / "latest_insight.json"
