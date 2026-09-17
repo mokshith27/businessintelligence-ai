@@ -9,11 +9,15 @@ import { Narratives } from './pages/Narratives';
 import { Actions } from './pages/Actions';
 import { Governance } from './pages/Governance';
 
+// The production bundle is served by FastAPI under /app, matching the 'base' option in vite.config.ts,
+// so the router is mounted on the same prefix for client-side routes to match.
+const BASENAME = import.meta.env.BASE_URL.replace(/\/+$/, '') || '/';
+
 export function App() {
   const { user, loading, login, logout } = useAuth();
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASENAME}>
       <Navbar user={user} onLogout={logout} />
       <RequireAuth user={user} loading={loading} login={login}>
         {user ? (
